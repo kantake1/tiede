@@ -1,0 +1,50 @@
+rules_version = '2';
+
+// 旅行IDを知っている人は誰でも閲覧・編集できる。
+// 旅行一覧の取得(list)は禁止し、IDの総当たり以外で他人の旅行に到達できないようにする。
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function tripExists(tripId) {
+      return exists(/databases/$(database)/documents/trips/$(tripId));
+    }
+
+    function validName(s, max) {
+      return s is string && s.size() > 0 && s.size() <= max;
+    }
+
+    match /trips/{tripId} {
+      allow get: if true;
+      allow list, delete: if false;
+      allow create: if request.resource.data.keys().hasOnly(['name', 'createdAt'])
+        && validName(request.resource.data.name, 100)
+        && request.resource.data.createdAt == request.time;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])
+        && validName(request.resource.data.name, 100);
+
+      match /members/{memberId} {
+        allow read, delete: if true;
+        allow create: if request.resource.data.keys().hasOnly(['name', 'createdAt'])
+          && validName(request.resource.data.name, 50)
+          && (tripExists(tripId) || existsAfter(/databases/$(database)/documents/trips/$(tripId)));
+        allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])
+          && validName(request.resource.data.name, 50);
+      }
+
+      match /expenses/{expenseId} {
+        function validExpense(d) {
+          return d.keys().hasOnly(['title', 'amount', 'payerId', 'mode', 'shares', 'createdAt'])
+            && validName(d.title, 100)
+            && d.amount is int && d.amount > 0 && d.amount <= 10000000000
+            && d.payerId is string
+            && d.mode in ['equal', 'ratio', 'amount']
+            && d.shares is map && d.shares.size() <= 100;
+        }
+
+        allow read, delete: if true;
+        allow create: if validExpense(request.resource.data) && tripExists(tripId);
+        allow update: if validExpense(request.resource.data)
+          && request.resource.data.createdAt == resource.data.createdAt;
+      }
+    }
+  }
+}
