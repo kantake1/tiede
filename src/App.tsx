@@ -22,7 +22,7 @@ export default function App() {
     <div className="container">
       <header className="app-header">
         <a href="#/" className="logo">
-          旅費精算
+          tiede
         </a>
       </header>
       <Home />

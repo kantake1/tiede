@@ -26,7 +26,7 @@ export function Sidebar(p: Props) {
     <aside className="sidebar" aria-label="サイドバー">
       <div className="sb-head">
         <a href="#/" className="logo sb-label">
-          旅費精算
+          tiede
         </a>
         <button className="ghost icon sb-close" onClick={p.onClose} aria-label="閉じる">
           ×

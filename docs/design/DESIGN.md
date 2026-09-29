@@ -1,4 +1,4 @@
-# DESIGN.md — 旅費精算
+# DESIGN.md — tiede
 
 このアプリの画面の決まり。見た目のトークンは Airbnb、デスクトップのサイドバーは Airtable の
 `topic-filter-rail`、列の区切り方は Cal.com を参考にした。元資料は

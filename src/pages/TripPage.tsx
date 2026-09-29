@@ -62,7 +62,7 @@ export function TripPage({ tripId }: { tripId: string }) {
   useEffect(() => {
     if (data) {
       touchRecent(tripId, data.trip.name)
-      document.title = `${data.trip.name} - 旅費精算`
+      document.title = `${data.trip.name} - tiede`
     }
   }, [tripId, data])
 
@@ -83,7 +83,7 @@ export function TripPage({ tripId }: { tripId: string }) {
     <div className="container">
       <header className="app-header">
         <a href="#/" className="logo">
-          旅費精算
+          tiede
         </a>
       </header>
       {node}
