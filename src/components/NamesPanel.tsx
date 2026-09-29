@@ -1,24 +1,25 @@
 import { useState } from 'react'
-import type { Expense, Member } from '../types'
 
 type Props = {
-  members: Member[]
-  expenses: Expense[]
+  title: string
+  entries: { id: string; name: string }[]
+  placeholder: string
+  /** 支払いから参照されているものは削除させない */
+  isReferenced: (id: string) => boolean
   onAdd: (name: string) => void
   onRename: (id: string, name: string) => void
   onRemove: (id: string) => void
 }
 
-export function MembersPanel({ members, expenses, onAdd, onRename, onRemove }: Props) {
+/** メンバー・カテゴリ共通の一覧 (追加・名前変更・削除) */
+export function NamesPanel({ title, entries, placeholder, isReferenced, onAdd, onRename, onRemove }: Props) {
   const [name, setName] = useState('')
-
-  const isReferenced = (id: string) => expenses.some((e) => e.payerId === id || (e.shares[id] ?? 0) > 0)
 
   return (
     <section className="card">
-      <h2>メンバー ({members.length}人)</h2>
+      <h2>{title}</h2>
       <ul className="list">
-        {members.map((m) => (
+        {entries.map((m) => (
           <li key={m.id} className="row">
             <span className="grow">{m.name}</span>
             <button
@@ -33,7 +34,7 @@ export function MembersPanel({ members, expenses, onAdd, onRename, onRemove }: P
             <button
               className="ghost small danger"
               onClick={() => {
-                if (isReferenced(m.id)) return alert(`${m.name} は支払いに含まれているため削除できない。先に該当する支払いを編集する。`)
+                if (isReferenced(m.id)) return alert(`${m.name} は支払いに使われているため削除できない。先に該当する支払いを編集する。`)
                 if (confirm(`${m.name} を削除する？`)) onRemove(m.id)
               }}
             >
@@ -52,7 +53,7 @@ export function MembersPanel({ members, expenses, onAdd, onRename, onRemove }: P
           setName('')
         }}
       >
-        <input className="grow" value={name} onChange={(e) => setName(e.target.value)} placeholder="メンバーを追加" maxLength={50} />
+        <input className="grow" value={name} onChange={(e) => setName(e.target.value)} placeholder={placeholder} maxLength={50} />
         <button type="submit">追加</button>
       </form>
     </section>

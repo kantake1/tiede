@@ -13,10 +13,10 @@ import {
   type DocumentData,
   type Timestamp,
 } from 'firebase/firestore'
-import type { Expense, Member, Trip } from '../types'
+import type { Category, Expense, Member, Trip } from '../types'
 import type { TripStore } from './types'
 
-const app = initializeApp({
+export const app = initializeApp({
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
@@ -26,12 +26,14 @@ const db = getFirestore(app)
 
 const trips = () => collection(db, 'trips')
 const members = (tripId: string) => collection(db, 'trips', tripId, 'members')
+const categories = (tripId: string) => collection(db, 'trips', tripId, 'categories')
 const expenses = (tripId: string) => collection(db, 'trips', tripId, 'expenses')
 
 // 書き込み直後のローカルスナップショットでは serverTimestamp が null になるため現在時刻で補う
 const millis = (v: unknown) => (v as Timestamp | null)?.toMillis?.() ?? Date.now()
 
 const toMember = (id: string, d: DocumentData): Member => ({ id, name: d.name, createdAt: millis(d.createdAt) })
+const toCategory = (id: string, d: DocumentData): Category => ({ id, name: d.name, createdAt: millis(d.createdAt) })
 const toExpense = (id: string, d: DocumentData): Expense => ({
   id,
   title: d.title,
@@ -39,6 +41,9 @@ const toExpense = (id: string, d: DocumentData): Expense => ({
   payerId: d.payerId,
   mode: d.mode,
   shares: d.shares ?? {},
+  items: d.items,
+  categoryId: d.categoryId,
+  memo: d.memo,
   createdAt: millis(d.createdAt),
 })
 
@@ -57,13 +62,15 @@ export const firestoreStore: TripStore = {
   subscribe(tripId, onData, onError) {
     let trip: Trip | null | undefined
     let ms: Member[] | undefined
+    let cs: Category[] | undefined
     let es: Expense[] | undefined
     const emit = () => {
-      if (trip === undefined || ms === undefined || es === undefined) return
+      if (trip === undefined || ms === undefined || cs === undefined || es === undefined) return
       if (trip === null) return onData(null)
       onData({
         trip,
         members: [...ms].sort((a, b) => a.createdAt - b.createdAt),
+        categories: [...cs].sort((a, b) => a.createdAt - b.createdAt),
         expenses: [...es].sort((a, b) => a.createdAt - b.createdAt),
       })
     }
@@ -81,6 +88,14 @@ export const firestoreStore: TripStore = {
         members(tripId),
         (s) => {
           ms = s.docs.map((d) => toMember(d.id, d.data()))
+          emit()
+        },
+        err,
+      ),
+      onSnapshot(
+        categories(tripId),
+        (s) => {
+          cs = s.docs.map((d) => toCategory(d.id, d.data()))
           emit()
         },
         err,
@@ -111,6 +126,20 @@ export const firestoreStore: TripStore = {
 
   async removeMember(tripId, memberId) {
     await deleteDoc(doc(members(tripId), memberId))
+  },
+
+  async addCategory(tripId, name) {
+    const ref = doc(categories(tripId))
+    await setDoc(ref, { name, createdAt: serverTimestamp() })
+    return ref.id
+  },
+
+  async renameCategory(tripId, categoryId, name) {
+    await updateDoc(doc(categories(tripId), categoryId), { name })
+  },
+
+  async removeCategory(tripId, categoryId) {
+    await deleteDoc(doc(categories(tripId), categoryId))
   },
 
   async addExpense(tripId, e) {

@@ -5,14 +5,15 @@ import type { Expense } from '../types'
 type Props = {
   expenses: Expense[]
   nameOf: (id: string) => string
+  categoryOf: (id: string | undefined) => string | undefined
   editingId?: string
   onEdit: (e: Expense) => void
   onDelete: (e: Expense) => void
 }
 
-const MODE_LABEL = { equal: '均等', ratio: '比率', amount: '金額指定' } as const
+const MODE_LABEL = { equal: '均等', ratio: '比率', amount: '金額指定', items: '品目別' } as const
 
-export function ExpenseList({ expenses, nameOf, editingId, onEdit, onDelete }: Props) {
+export function ExpenseList({ expenses, nameOf, categoryOf, editingId, onEdit, onDelete }: Props) {
   if (expenses.length === 0) return null
   return (
     <section className="card">
@@ -24,13 +25,31 @@ export function ExpenseList({ expenses, nameOf, editingId, onEdit, onDelete }: P
             <li key={e.id} className={`expense ${e.id === editingId ? 'editing' : ''}`}>
               <div className="row">
                 <div className="grow">
-                  <div className="expense-title">{e.title}</div>
+                  <div className="expense-title">
+                    {e.title}
+                    {categoryOf(e.categoryId) && <span className="chip small-chip">{categoryOf(e.categoryId)}</span>}
+                  </div>
                   <div className="muted small">
                     {nameOf(e.payerId)} が立替 · {MODE_LABEL[e.mode]}
                   </div>
                 </div>
                 <div className="expense-amount">{yen(e.amount)}</div>
               </div>
+              {e.items && e.items.length > 0 && (
+                <details className="small">
+                  <summary>品目 ({e.items.length})</summary>
+                  <ul className="item-lines">
+                    {e.items.map((it, i) => (
+                      <li key={i}>
+                        <span className="grow">{it.name}</span>
+                        <span className="muted">{it.memberIds.map(nameOf).join('・')}</span>
+                        <span>{yen(it.price)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+              {e.memo && <p className="memo">{e.memo}</p>}
               <div className="row">
                 <div className="grow muted small">
                   {Object.entries(owed)

@@ -110,3 +110,36 @@ describe('settle', () => {
     }
   })
 })
+
+describe('computeOwed (品目別)', () => {
+  const items = (...xs: [string, number, string[]][]) => xs.map(([name, price, memberIds]) => ({ name, price, memberIds }))
+
+  it('品目ごとに対象者で割る', () => {
+    expect(
+      computeOwed({ amount: 3000, payerId: 'A', mode: 'items', shares: {}, items: items(['ビール', 1000, ['A', 'B']], ['刺身', 2000, ['B']]) }),
+    ).toEqual({ A: 500, B: 2500 })
+  })
+
+  it('外税の差額は小計に比例して配分し、端数は支払者', () => {
+    // 小計 A:1000 B:2000、総額 3300 → A:1100 B:2200
+    expect(
+      computeOwed({ amount: 3300, payerId: 'A', mode: 'items', shares: {}, items: items(['a', 1000, ['A']], ['b', 2000, ['B']]) }),
+    ).toEqual({ A: 1100, B: 2200 })
+    // 3人割り 1000円 → 333.33.. ずつ、端数1円は支払者C
+    expect(
+      computeOwed({ amount: 1000, payerId: 'C', mode: 'items', shares: {}, items: items(['a', 1000, ['A', 'B', 'C']]) }),
+    ).toEqual({ A: 333, B: 333, C: 334 })
+  })
+
+  it('値引き品目 (負の価格) を含んでも合計は総額と一致する', () => {
+    const owed = computeOwed({
+      amount: 2500,
+      payerId: 'A',
+      mode: 'items',
+      shares: {},
+      items: items(['a', 2000, ['A', 'B']], ['b', 1000, ['B']], ['値引', -500, ['A', 'B']]),
+    })
+    expect(Object.values(owed).reduce((s, v) => s + v, 0)).toBe(2500)
+    expect(owed).toEqual({ A: 750, B: 1750 })
+  })
+})

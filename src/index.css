@@ -403,6 +403,7 @@ summary {
 }
 
 .participants .check input {
+  accent-color: var(--accent);
   width: 18px;
   height: 18px;
 }
@@ -419,4 +420,107 @@ summary {
   font-size: 0.85rem;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+}
+
+/* カテゴリ */
+.filter {
+  margin-top: 12px;
+}
+
+.chip.toggle {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  padding: 4px 12px;
+}
+
+.chip.toggle.on {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.small-chip {
+  margin-left: 8px;
+  font-size: 0.75rem;
+  font-weight: 400;
+  vertical-align: middle;
+}
+
+/* メモ */
+.memo {
+  margin: 4px 0;
+  padding: 6px 10px;
+  border-left: 3px solid var(--border);
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* レシート・品目 */
+label.button {
+  display: inline-block;
+  padding: 8px 14px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+label.button.disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+
+.receipt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.receipt .error {
+  width: 100%;
+}
+
+.items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.items > li {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.items .price-input {
+  width: 96px;
+  text-align: right;
+}
+
+.item-lines {
+  list-style: none;
+  margin: 4px 0;
+  padding: 0;
+}
+
+.item-lines li {
+  display: flex;
+  gap: 8px;
+  padding: 2px 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.participants li:has(> span:first-child) {
+  grid-template-columns: 1fr auto;
+}
+
+.participants li:has(> span:first-child) .owed {
+  grid-column: 2;
 }

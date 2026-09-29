@@ -13,7 +13,7 @@ export function Home() {
 
   async function create(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim()) return setError('旅行名を入力する')
+    if (!name.trim()) return setError('グループ名を入力する')
     if (memberNames.length < 2) return setError('メンバーを2人以上入力する')
     setBusy(true)
     setError('')
@@ -33,11 +33,11 @@ export function Home() {
         <p className="notice">Firebase 未設定のためローカルモードで動作中。データはこのブラウザ内にのみ保存され、共有できない。</p>
       )}
       <section className="card">
-        <h2>新しい旅行を作成</h2>
+        <h2>新しいグループを作成</h2>
         <form onSubmit={create} className="stack">
           <label>
-            旅行名
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="例: 北海道 2026夏" maxLength={100} />
+            グループ名
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="例: 大学の友達" maxLength={100} />
           </label>
           <label>
             メンバー (改行またはカンマ区切り)
@@ -66,7 +66,7 @@ export function Home() {
 
       {recent.length > 0 && (
         <section className="card">
-          <h2>最近開いた旅行</h2>
+          <h2>最近開いたグループ</h2>
           <ul className="list">
             {recent.map((r) => (
               <li key={r.id} className="row">

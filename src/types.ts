@@ -8,8 +8,15 @@ export type Member = {
  * equal: 対象者で均等割り (shares の値は 1)
  * ratio: 比率で按分 (shares の値は重み)
  * amount: 各自の負担額を直接指定 (shares の値は円)
+ * items: 品目ごとに対象者を指定 (items を使い shares は空)
  */
-export type SplitMode = 'equal' | 'ratio' | 'amount'
+export type SplitMode = 'equal' | 'ratio' | 'amount' | 'items'
+
+export type Item = {
+  name: string
+  price: number
+  memberIds: string[]
+}
 
 export type Expense = {
   id: string
@@ -18,6 +25,9 @@ export type Expense = {
   payerId: string
   mode: SplitMode
   shares: Record<string, number>
+  items?: Item[]
+  categoryId?: string
+  memo?: string
   createdAt: number
 }
 
@@ -29,8 +39,15 @@ export type Trip = {
   createdAt: number
 }
 
+export type Category = {
+  id: string
+  name: string
+  createdAt: number
+}
+
 export type TripData = {
   trip: Trip
   members: Member[]
+  categories: Category[]
   expenses: Expense[]
 }
