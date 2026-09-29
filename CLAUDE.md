@@ -26,5 +26,5 @@
 
 ## 未完了・次の候補
 
-- Firebase プロジェクト未作成。`.env.local` 未設定のため実 Firestore と `firestore.rules` は未検証
+- Firebase プロジェクト `tiede-8eae4` (Firestore: asia-northeast1, Standard)。ルールはデプロイ・検証済み。Hosting は未デプロイ
 - 候補: 支払いの日付・カテゴリ、送金済みチェック、公開先の決定 (Firebase Hosting 想定で `firebase.json` 用意済み)
