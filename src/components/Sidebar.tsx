@@ -35,6 +35,19 @@ export function Sidebar(p: Props) {
 
   return (
     <aside className="sidebar" aria-label="サイドバー">
+      {/* デスクトップ: 格納ボタンはサイドバー上端の右 (格納時はボタンのみ) */}
+      <div className="sb-top">
+        <button
+          className="ghost icon sb-collapse"
+          onClick={p.onToggleCollapse}
+          aria-label={p.collapsed ? 'サイドバーを開く' : 'サイドバーを格納'}
+          aria-expanded={!p.collapsed}
+          title={p.collapsed ? '開く' : '格納'}
+        >
+          {p.collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+        </button>
+      </div>
+      {/* タブレット・スマホの引き出し用 */}
       <div className="sb-head">
         <a href="#/" className="logo sb-label">
           tiede
@@ -85,23 +98,13 @@ export function Sidebar(p: Props) {
       </nav>
 
       <div className="sb-foot">
-        <button className="ghost sb-item" onClick={p.onSettings} aria-label="メンバー・カテゴリ設定" title="メンバー・カテゴリ設定">
-          <Settings size={18} className="sb-icon" />
-          <span className="sb-label">メンバー・カテゴリ</span>
-        </button>
         <button className="ghost sb-item" onClick={p.onShare} aria-label="URLを共有" title="URLを共有">
           <Link2 size={18} className="sb-icon" />
           <span className="sb-label">{p.copied ? 'コピーした' : 'URLを共有'}</span>
         </button>
-        <button
-          className="ghost sb-item sb-collapse"
-          onClick={p.onToggleCollapse}
-          aria-label={p.collapsed ? 'サイドバーを開く' : 'サイドバーを格納'}
-          aria-expanded={!p.collapsed}
-          title={p.collapsed ? '開く' : '格納'}
-        >
-          {p.collapsed ? <PanelLeftOpen size={18} className="sb-icon" /> : <PanelLeftClose size={18} className="sb-icon" />}
-          <span className="sb-label">格納</span>
+        <button className="ghost sb-item" onClick={p.onSettings} aria-label="メンバー・カテゴリ設定" title="メンバー・カテゴリ設定">
+          <Settings size={18} className="sb-icon" />
+          <span className="sb-label">メンバー・カテゴリ</span>
         </button>
       </div>
     </aside>

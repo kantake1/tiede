@@ -186,6 +186,12 @@ export function TripPage({ tripId }: { tripId: string }) {
 
   return (
     <div className={`layout ${collapsed ? 'collapsed' : ''} ${drawer ? 'drawer-open' : ''} ${sheet ? 'sheet-open' : ''}`} style={layoutStyle}>
+      {/* デスクトップの上部見出し。サイドバーの状態に関わらず表示 */}
+      <header className="apphead">
+        <a href="#/" className="logo">
+          tiede
+        </a>
+      </header>
       <Sidebar
         tripName={data.trip.name}
         rows={rows}
