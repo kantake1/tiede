@@ -12,7 +12,6 @@
   --border-strong: #c1c1c1;
   --accent: #ff385c;
   --accent-active: #e00b41;
-  --accent-disabled: #ffd1da;
   --accent-text: #ffffff;
   --plus: #008a05;
   --minus: #c13515;
@@ -30,8 +29,8 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #121212;
-    --surface-soft: #1e1e1e;
-    --surface-strong: #262626;
+    --surface-soft: #242424;
+    --surface-strong: #2e2e2e;
     --card: #181818;
     --text: #f2f2f2;
     --body: #d0d0d0;
@@ -40,7 +39,6 @@
     --border: #333333;
     --border-strong: #555555;
     --accent-active: #ff5a78;
-    --accent-disabled: #5c2230;
     --plus: #4cc26a;
     --minus: #ff7a5c;
     --danger: #ff7a5c;
@@ -222,10 +220,12 @@ button.primary:active {
   border-color: var(--accent-active);
 }
 
+/* 淡いピンクに白文字では読めないため、無効時は灰色の面と薄墨の文字にする */
 button.primary:disabled {
   opacity: 1;
-  background: var(--accent-disabled);
-  border-color: var(--accent-disabled);
+  background: var(--surface-strong);
+  border-color: var(--surface-strong);
+  color: var(--muted);
 }
 
 /* テキストボタン: 墨色、ホバーで下線 */
@@ -1268,4 +1268,14 @@ body.resizing .layout {
   .expense .row button + button {
     margin-left: 8px;
   }
+}
+
+/* 引き出しを開いている間は＋ボタンを隠す */
+.layout.drawer-open .fab {
+  display: none;
+}
+
+/* 各自の負担額は「名前 金額」の途中で改行しない */
+.owed-item {
+  white-space: nowrap;
 }

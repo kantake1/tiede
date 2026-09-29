@@ -71,8 +71,14 @@ export function ExpenseList({ expenses, nameOf, memberIds, categoryOf, editingId
                     {Object.entries(owed)
                       .filter(([, v]) => v > 0)
                       .sort(([a], [b]) => order(a) - order(b))
-                      .map(([id, v]) => `${nameOf(id)} ${yen(v)}`)
-                      .join(' / ')}
+                      .map(([id, v], i) => (
+                        <span key={id}>
+                          {i > 0 && ' / '}
+                          <span className="owed-item">
+                            {nameOf(id)} {yen(v)}
+                          </span>
+                        </span>
+                      ))}
                   </div>
                   <button className="ghost small" onClick={() => onEdit(e)}>
                     編集

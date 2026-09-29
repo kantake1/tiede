@@ -23,7 +23,7 @@
 | `--body` | #3f3f3f | メモなど長めの文 |
 | `--muted` / `--muted-soft` | #6a6a6a / #929292 | 補足、プレースホルダー |
 | `--border` / `--border-strong` | #dddddd / #c1c1c1 | 細線 / メモの左線 |
-| `--accent` / `--accent-active` / `--accent-disabled` | #ff385c / #e00b41 / #ffd1da | 主要ボタンの通常・押下・無効 |
+| `--accent` / `--accent-active` | #ff385c / #e00b41 | 主要ボタンの通常・押下 |
 | `--danger` / `--minus` | #c13515 | 削除・エラー・支払う側の差額。Rausch と区別する |
 | `--plus` | #008a05 | 受け取る側の差額、精算不要 (Airbnb に無いアプリ独自色) |
 | `--scrim` | 黒 50% | ダイアログ・引き出しの背面 |
@@ -46,7 +46,7 @@
 
 | 部品 | 決まり |
 |---|---|
-| 主要ボタン `button.primary` | Rausch 塗り・白文字・高さ48px。押下で `--accent-active`、無効は `--accent-disabled` |
+| 主要ボタン `button.primary` | Rausch 塗り・白文字・高さ48px。押下で `--accent-active`。無効時は `--surface-strong` の面に `--muted` の文字 (淡いピンクに白文字は読めないため Airbnb から変更) |
 | 補助ボタン (レシートを読み取る) | 白地・墨色 1px 枠・墨色文字 |
 | テキストボタン `button.ghost` | 墨色文字、ホバーで下線。削除のみ `--danger` |
 | 入力 | 白地・細線・角丸8px。フォーカスで枠を墨色 2px 相当に |
