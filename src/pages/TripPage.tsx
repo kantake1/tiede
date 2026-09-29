@@ -7,6 +7,7 @@ import { ResizeHandle } from '../components/ResizeHandle'
 import { SettlementPanel } from '../components/SettlementPanel'
 import { Sidebar } from '../components/Sidebar'
 import { Toast, type ToastMessage } from '../components/Toast'
+import { useConfirm } from '../components/ConfirmDialog'
 import { friendlyError, WRITE_ERROR_EVENT } from '../lib/errors'
 import { askName } from '../lib/names'
 import { touchRecent } from '../lib/recent'
@@ -65,6 +66,7 @@ export function TripPage({ tripId }: { tripId: string }) {
   }, [])
   const [sheet, setSheet] = useState(false)
   const settingsRef = useRef<HTMLDialogElement>(null)
+  const [askConfirm, confirmUi] = useConfirm()
   const [widths, setWidths] = useState<Widths>(loadWidths)
   const [toast, setToast] = useState<ToastMessage | null>(null)
   const [online, setOnline] = useState(() => navigator.onLine)
@@ -277,6 +279,22 @@ export function TripPage({ tripId }: { tripId: string }) {
     setFilter(filter.filter((k) => !selectedActive.some((c) => c.id === k)))
   }
 
+  /**
+   * イベントの削除。中の支払いは消さず「未分類」になる。
+   * サイドバーからは独自の確認画面、設定画面 (モーダルの dialog 内) からはブラウザの確認を使う
+   */
+  async function deleteEvent(id: string, native = false) {
+    const c = data!.categories.find((x) => x.id === id)
+    if (!c) return
+    const count = data!.expenses.filter((e) => e.categoryId === id).length
+    const title = `「${c.name}」を削除しますか？`
+    const body = count ? `含まれる支払い ${count} 件は「未分類」になります。` : ''
+    const ok = native ? confirm(body ? `${title}\n${body}` : title) : await askConfirm({ title, body, okLabel: '削除' })
+    if (!ok) return
+    run(store!.removeCategory(tripId, id))
+    setFilter((f) => f.filter((k) => k !== id))
+  }
+
   function archive(archived: boolean, id: string) {
     const name = data!.categories.find((c) => c.id === id)?.name
     if (archived && !confirm(`「${name}」を精算済みにしてアーカイブに移しますか？`)) return
@@ -310,6 +328,7 @@ export function TripPage({ tripId }: { tripId: string }) {
         onFilter={setFilter}
         onAddCategory={addCategory}
         onRestore={(id) => archive(false, id)}
+        onDelete={(id) => deleteEvent(id)}
         onRename={rename}
         onSettings={() => settingsRef.current?.showModal()}
         onShare={share}
@@ -494,6 +513,7 @@ export function TripPage({ tripId }: { tripId: string }) {
       </button>
 
       <Toast toast={toast} onClose={closeToast} />
+      {confirmUi}
 
       <dialog ref={settingsRef} className="settings" onClick={(e) => e.target === e.currentTarget && settingsRef.current?.close()}>
         <div className="row">
@@ -518,12 +538,10 @@ export function TripPage({ tripId }: { tripId: string }) {
           entries={data.categories}
           placeholder="例: 沖縄旅行、3月の飲み会"
           isReferenced={(id) => data.expenses.some((e) => e.categoryId === id)}
+          askBeforeRemove={false}
           onAdd={(name) => run(store.addCategory(tripId, name))}
           onRename={(id, name) => run(store.renameCategory(tripId, id, name))}
-          onRemove={(id) => {
-            run(store.removeCategory(tripId, id))
-            setFilter(filter.filter((k) => k !== id))
-          }}
+          onRemove={(id) => deleteEvent(id, true)}
         />
       </dialog>
     </div>

@@ -1347,3 +1347,128 @@ body.resizing .layout {
     display: none;
   }
 }
+
+/* 確認画面 (削除など) */
+.modal-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: var(--scrim);
+  animation: sb-fade 0.15s ease;
+}
+
+.modal {
+  width: min(340px, 100%);
+  padding: 20px;
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: var(--shadow-float);
+}
+
+.modal-title {
+  margin: 0 0 6px;
+  font-weight: 700;
+}
+
+.modal-body {
+  margin: 0;
+  color: var(--body);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+button.danger-fill {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+button.danger-fill:hover {
+  background: var(--danger);
+  filter: brightness(0.92);
+}
+
+/* イベントの削除: デスクトップは金額の右に薄いゴミ箱、マウスを乗せると赤 */
+.sb-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.sb-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.sb-row-main > label,
+.sb-row-main > .grow {
+  flex: 1;
+  min-width: 0;
+}
+
+button.sb-trash {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted-soft);
+}
+
+button.sb-trash:hover,
+button.sb-trash:focus-visible {
+  color: var(--danger);
+  background: var(--surface-soft);
+}
+
+/* タブレット・スマホ (引き出し): 行を左へスワイプすると右端に赤い削除ボタン */
+@media (max-width: 1127px) {
+  .sb-row {
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+    border-radius: 8px;
+    gap: 0;
+  }
+
+  .sb-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sb-row-main {
+    flex: 0 0 100%;
+    scroll-snap-align: start;
+  }
+
+  button.sb-trash {
+    flex: 0 0 64px;
+    align-self: stretch;
+    scroll-snap-align: end;
+    border-radius: 0;
+    background: var(--danger);
+    color: #ffffff;
+  }
+
+  button.sb-trash:hover {
+    background: var(--danger);
+    color: #ffffff;
+  }
+}

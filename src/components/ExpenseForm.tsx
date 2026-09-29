@@ -36,7 +36,7 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
   const [amountText, setAmountText] = useState(initial ? String(initial.amount) : '')
   const [payerChoice, setPayerId] = useState(initial?.payerId ?? members[0]?.id ?? '')
   const [mode, setMode] = useState<SplitMode>(initial?.mode ?? 'equal')
-  const [categoryId, setCategoryId] = useState(initial ? (initial.categoryId ?? '') : defaultCategoryId)
+  const [categoryId, setCategoryId] = useState(initial ? (categories.some((c) => c.id === initial.categoryId) ? initial.categoryId! : '') : defaultCategoryId)
   const [memo, setMemo] = useState(initial?.memo ?? '')
   const [date, setDate] = useState(initial ? dateOf(initial) : today())
   const [included, setIncluded] = useState<Record<string, boolean>>(() =>

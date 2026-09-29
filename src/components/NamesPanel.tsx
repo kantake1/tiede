@@ -10,10 +10,12 @@ type Props = {
   onAdd: (name: string) => void
   onRename: (id: string, name: string) => void
   onRemove: (id: string) => void
+  /** false なら確認・参照チェックを呼び出し側に任せる (イベント) */
+  askBeforeRemove?: boolean
 }
 
 /** メンバー・イベント共通の一覧 (追加・名前変更・削除) */
-export function NamesPanel({ title, entries, placeholder, isReferenced, onAdd, onRename, onRemove }: Props) {
+export function NamesPanel({ title, entries, placeholder, isReferenced, onAdd, onRename, onRemove, askBeforeRemove = true }: Props) {
   const [name, setName] = useState('')
   const [error, setError] = useState('')
 
@@ -36,7 +38,9 @@ export function NamesPanel({ title, entries, placeholder, isReferenced, onAdd, o
             <button
               className="ghost small danger"
               onClick={() => {
-                if (isReferenced(m.id)) return alert(`${m.name} は支払いに使われているため削除できません。先に該当する支払いを編集してください。`)
+                if (!askBeforeRemove) return onRemove(m.id)
+                if (isReferenced(m.id))
+                  return alert(`${m.name} は支払いに使われているため削除できません。先に該当する支払いを編集してください。`)
                 if (confirm(`${m.name} を削除しますか？`)) onRemove(m.id)
               }}
             >
@@ -50,7 +54,11 @@ export function NamesPanel({ title, entries, placeholder, isReferenced, onAdd, o
         onSubmit={(e) => {
           e.preventDefault()
           const n = name.trim()
-          const problem = nameProblem(n, 50, entries.map((x) => x.name))
+          const problem = nameProblem(
+            n,
+            50,
+            entries.map((x) => x.name),
+          )
           if (problem) return setError(problem)
           onAdd(n)
           setName('')

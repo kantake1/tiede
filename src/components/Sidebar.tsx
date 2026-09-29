@@ -1,4 +1,4 @@
-import { ArchiveRestore, ChevronRight, Link2, PanelLeftClose, PanelLeftOpen, Plus, Settings, X } from 'lucide-react'
+import { ArchiveRestore, ChevronRight, Link2, PanelLeftClose, PanelLeftOpen, Plus, Settings, Trash2, X } from 'lucide-react'
 import { yen } from '../lib/format'
 import { Logo } from './Logo'
 
@@ -15,6 +15,8 @@ type Props = {
   onFilter: (f: string[]) => void
   onAddCategory: () => void
   onRestore: (key: string) => void
+  /** イベントの削除 (確認は呼び出し側) */
+  onDelete: (key: string) => void
   onRename: () => void
   onSettings: () => void
   onShare: () => void
@@ -32,6 +34,13 @@ export function Sidebar(p: Props) {
       <span className="grow">{r.name}</span>
       <span className="muted small">{yen(r.total)}</span>
     </label>
+  )
+
+  // デスクトップは金額の右にゴミ箱。タブレット・スマホは行を左へスワイプすると赤い削除ボタン (CSS のスクロールスナップ)
+  const trash = (r: CategoryRow) => (
+    <button className="sb-trash" onClick={() => p.onDelete(r.key)} aria-label={`${r.name} を削除`} title="削除">
+      <Trash2 size={16} />
+    </button>
   )
 
   return (
@@ -74,9 +83,17 @@ export function Sidebar(p: Props) {
               <span className="muted small">{yen(p.total)}</span>
             </label>
           </li>
-          {p.rows.map((r) => (
-            <li key={r.key}>{row(r)}</li>
-          ))}
+          {p.rows.map((r) =>
+            // 未分類は削除できない
+            r.key === '' ? (
+              <li key={r.key}>{row(r)}</li>
+            ) : (
+              <li key={r.key} className="sb-row">
+                <div className="sb-row-main">{row(r)}</div>
+                {trash(r)}
+              </li>
+            ),
+          )}
         </ul>
         <button className="ghost small with-icon" onClick={p.onAddCategory}>
           <Plus size={16} /> イベントを追加
@@ -89,11 +106,19 @@ export function Sidebar(p: Props) {
             </summary>
             <ul className="sb-cats">
               {p.archived.map((r) => (
-                <li key={r.key} className="row">
-                  <div className="grow">{row(r)}</div>
-                  <button className="ghost icon" onClick={() => p.onRestore(r.key)} aria-label={`${r.name} をアーカイブから戻す`} title="戻す">
-                    <ArchiveRestore size={16} />
-                  </button>
+                <li key={r.key} className="sb-row">
+                  <div className="sb-row-main">
+                    <div className="grow">{row(r)}</div>
+                    <button
+                      className="ghost icon"
+                      onClick={() => p.onRestore(r.key)}
+                      aria-label={`${r.name} をアーカイブから戻す`}
+                      title="戻す"
+                    >
+                      <ArchiveRestore size={16} />
+                    </button>
+                  </div>
+                  {trash(r)}
                 </li>
               ))}
             </ul>
