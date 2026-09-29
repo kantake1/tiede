@@ -60,7 +60,9 @@ export function TripPage({ tripId }: { tripId: string }) {
   const [slow, setSlow] = useState(false)
 
   const notify = useCallback(
-    (text: string, opts: Omit<ToastMessage, 'id' | 'text'> = {}) => setToast({ id: Date.now(), text, ...opts }),
+    (text: string, opts: Omit<ToastMessage, 'id' | 'text'> = {}) =>
+      // 「元に戻す」付きの通知は、操作のない普通の通知では上書きしない (取り消しの機会を失わないため)
+      setToast((cur) => (cur?.action && !opts.action && opts.tone !== 'error' ? cur : { id: Date.now(), text, ...opts })),
     [],
   )
   const closeToast = useCallback(() => setToast(null), [])
@@ -334,7 +336,14 @@ export function TripPage({ tripId }: { tripId: string }) {
         <div className="card">
           <div className="row">
             <h2 className="grow">{editing ? '支払いを編集' : '支払いを追加'}</h2>
-            <button className="ghost icon sheet-close" onClick={() => setSheet(false)} aria-label="閉じる">
+            <button
+              className="ghost icon sheet-close"
+              onClick={() => {
+                setSheet(false)
+                setEditing(null)
+              }}
+              aria-label="閉じる"
+            >
               <X size={20} />
             </button>
           </div>
@@ -369,6 +378,7 @@ export function TripPage({ tripId }: { tripId: string }) {
               onCreateCategory={(name) => store.addCategory(tripId, name)}
               readReceipt={readReceipt}
               onSubmit={async (input) => {
+                if (editingChanged && !confirm('この支払いは他の人が更新している。上書きして保存する？')) throw new Error('cancelled')
                 const p = editing ? store.updateExpense(tripId, editing.id, input) : store.addExpense(tripId, input)
                 // 先に知らせる (受領を待った後だと、その間に出た「元に戻す」の通知を上書きしてしまう)
                 if (!editing) notify(`「${input.title}」を追加した`)
@@ -441,7 +451,14 @@ export function TripPage({ tripId }: { tripId: string }) {
         />
       </section>
 
-      <button className="fab primary" onClick={() => setSheet(true)} aria-label="支払いを追加">
+      <button
+        className="fab primary"
+        onClick={() => {
+          setEditing(null)
+          setSheet(true)
+        }}
+        aria-label="支払いを追加"
+      >
         <Plus size={28} />
       </button>
 

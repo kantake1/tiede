@@ -1241,3 +1241,31 @@ body.resizing .layout {
   margin: 0;
   padding: 0;
 }
+
+/* 閉じている引き出しにキーボード・読み上げのフォーカスが入らないように */
+@media (max-width: 1127px) {
+  .sidebar {
+    visibility: hidden;
+    transition:
+      transform 0.2s ease,
+      visibility 0s linear 0.2s;
+  }
+
+  .layout.drawer-open .sidebar {
+    visibility: visible;
+    transition: transform 0.2s ease;
+  }
+}
+
+/* タッチ操作では編集・削除などの小さなボタンも押しやすい大きさに */
+@media (pointer: coarse) {
+  button.small,
+  button.icon {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .expense .row button + button {
+    margin-left: 8px;
+  }
+}

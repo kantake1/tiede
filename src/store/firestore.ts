@@ -185,8 +185,11 @@ export const firestoreStore: TripStore = {
   removeMember: (tripId, memberId) => write(deleteDoc(doc(members(tripId), memberId))),
 
   async addCategory(tripId, name) {
+    // ID は端末で決まるので、受領を待たずに返す (圏外でカテゴリを作ってすぐ選べるように)。失敗は後から通知
     const ref = doc(categories(tripId))
-    await write(setDoc(ref, { name, createdAt: serverTimestamp() }))
+    write(setDoc(ref, { name, createdAt: serverTimestamp() })).catch((e) =>
+      window.dispatchEvent(new CustomEvent(WRITE_ERROR_EVENT, { detail: e })),
+    )
     return ref.id
   },
 
