@@ -30,9 +30,9 @@ export function SettlementPanel({ members, expenses, nameOf, action, groupName, 
         {action}
       </div>
       {expenses.length === 0 ? (
-        <p className="muted">支払いを追加すると精算結果が表示される。</p>
+        <p className="muted">支払いを追加すると精算結果が表示されます。</p>
       ) : transfers.length === 0 ? (
-        <p className="done">精算不要 (全員の負担が釣り合っている)</p>
+        <p className="done">精算は不要です (全員の負担が釣り合っています)</p>
       ) : (
         <ul className="transfers">
           {transfers.map((t, i) => (

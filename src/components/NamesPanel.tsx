@@ -36,8 +36,8 @@ export function NamesPanel({ title, entries, placeholder, isReferenced, onAdd, o
             <button
               className="ghost small danger"
               onClick={() => {
-                if (isReferenced(m.id)) return alert(`${m.name} は支払いに使われているため削除できない。先に該当する支払いを編集する。`)
-                if (confirm(`${m.name} を削除する？`)) onRemove(m.id)
+                if (isReferenced(m.id)) return alert(`${m.name} は支払いに使われているため削除できません。先に該当する支払いを編集してください。`)
+                if (confirm(`${m.name} を削除しますか？`)) onRemove(m.id)
               }}
             >
               削除

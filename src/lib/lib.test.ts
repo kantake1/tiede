@@ -53,7 +53,7 @@ describe('settlementText', () => {
     )
   })
   it('精算不要', () => {
-    expect(settlementText({ groupName: 'G', label: 'すべて', transfers: [], total: 0, nameOf })).toBe('【G】精算\n精算不要 (全員の負担が釣り合っている)\n総額 ¥0')
+    expect(settlementText({ groupName: 'G', label: 'すべて', transfers: [], total: 0, nameOf })).toBe('【G】精算\n精算は不要です (全員の負担が釣り合っています)\n総額 ¥0')
   })
 })
 

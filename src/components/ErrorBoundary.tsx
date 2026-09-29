@@ -19,8 +19,8 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
           </a>
         </header>
         <div className="card stack">
-          <h2>表示中に問題が発生した</h2>
-          <p className="muted">入力済みのデータは保存されている。再読み込みで直ることが多い。</p>
+          <h2>表示中に問題が発生しました</h2>
+          <p className="muted">入力済みのデータは保存されています。再読み込みで直ることが多いです。</p>
           <pre className="error small">{this.state.error.message}</pre>
           <button className="primary" onClick={() => location.reload()}>
             再読み込み

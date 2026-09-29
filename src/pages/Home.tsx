@@ -15,10 +15,10 @@ export function Home() {
 
   async function create(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim()) return setError('グループ名を入力する')
-    if (memberNames.length < 2) return setError('メンバーを2人以上入力する')
-    if (memberNames.some((n) => n.length > 50)) return setError('メンバー名は50文字以内にする')
-    if (memberNames.length > 100) return setError('メンバーは100人までにする')
+    if (!name.trim()) return setError('グループ名を入力してください')
+    if (memberNames.length < 2) return setError('メンバーを2人以上入力してください')
+    if (memberNames.some((n) => n.length > 50)) return setError('メンバー名は50文字以内にしてください')
+    if (memberNames.length > 100) return setError('メンバーは100人までにしてください')
     setBusy(true)
     setError('')
     try {
@@ -26,7 +26,7 @@ export function Home() {
       const id = await store.createTrip(name.trim(), memberNames)
       location.assign(`/t/${id}`)
     } catch (err) {
-      setError(`作成に失敗した: ${friendlyError(err)}`)
+      setError(`作成できませんでした: ${friendlyError(err)}`)
       setBusy(false)
     }
   }
@@ -34,7 +34,7 @@ export function Home() {
   return (
     <main>
       {!isFirebaseConfigured && (
-        <p className="notice">Firebase 未設定のためローカルモードで動作中。データはこのブラウザ内にのみ保存され、共有できない。</p>
+        <p className="notice">Firebase 未設定のためローカルモードで動作中です。データはこのブラウザ内にのみ保存され、共有できません。</p>
       )}
       <section className="card">
         <h2>新しいグループを作成</h2>

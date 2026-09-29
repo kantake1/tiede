@@ -104,7 +104,7 @@ export function Sidebar(p: Props) {
       <div className="sb-foot">
         <button className="ghost sb-item" onClick={p.onShare} aria-label="URLを共有" title="URLを共有">
           <Link2 size={18} className="sb-icon" />
-          <span className="sb-label">{p.copied ? 'コピーした' : 'URLを共有'}</span>
+          <span className="sb-label">{p.copied ? 'コピーしました' : 'URLを共有'}</span>
         </button>
         <button className="ghost sb-item" onClick={p.onSettings} aria-label="設定" title="設定">
           <Settings size={18} className="sb-icon" />

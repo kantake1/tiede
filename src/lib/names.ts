@@ -1,8 +1,8 @@
 /** 名前の入力を検証する。空・長すぎ・重複なら理由を返す */
 export function nameProblem(name: string, max: number, existing: string[] = []): string | null {
-  if (!name) return '名前を入力する'
-  if (name.length > max) return `${max}文字以内にする`
-  if (existing.includes(name)) return `「${name}」は既にある`
+  if (!name) return '名前を入力してください'
+  if (name.length > max) return `${max}文字以内にしてください`
+  if (existing.includes(name)) return `「${name}」は既にあります`
   return null
 }
 

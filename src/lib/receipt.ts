@@ -59,8 +59,8 @@ async function encode(file: File): Promise<{ mimeType: string; data: string }> {
     return { mimeType: 'image/jpeg', data: await toJpegBase64(file) }
   } catch {
     const type = file.type || (/\.hei[cf]$/i.test(file.name) ? 'image/heic' : '')
-    if (!/^image\/(heic|heif|jpeg|png|webp)$/.test(type)) throw new Error('この画像形式は読み取れない。JPEG か PNG の写真を選ぶ')
-    if (file.size > 15 * 1024 * 1024) throw new Error('画像が大きすぎる (15MB まで)')
+    if (!/^image\/(heic|heif|jpeg|png|webp)$/.test(type)) throw new Error('この画像形式は読み取れません。JPEG か PNG の写真を選んでください')
+    if (file.size > 15 * 1024 * 1024) throw new Error('画像が大きすぎます (15MB まで)')
     return { mimeType: type, data: await readAsBase64(file) }
   }
 }
@@ -71,7 +71,7 @@ export async function readReceipt(file: File): Promise<ReceiptResult> {
   try {
     r = JSON.parse(res.response.text()) as ReceiptResult
   } catch {
-    throw new Error('レシートとして読み取れなかった。明るい場所で全体が写るように撮り直す')
+    throw new Error('レシートとして読み取れませんでした。明るい場所で全体が写るように撮り直してください')
   }
   return {
     storeName: r.storeName ?? '',

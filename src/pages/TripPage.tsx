@@ -82,7 +82,7 @@ export function TripPage({ tripId }: { tripId: string }) {
   useEffect(() => {
     const on = () => setOnline(true)
     const off = () => setOnline(false)
-    const failed = (e: Event) => notify(`保存できなかった変更がある: ${friendlyError((e as CustomEvent).detail)}`, { tone: 'error' })
+    const failed = (e: Event) => notify(`保存できなかった変更があります: ${friendlyError((e as CustomEvent).detail)}`, { tone: 'error' })
     window.addEventListener('online', on)
     window.addEventListener('offline', off)
     window.addEventListener(WRITE_ERROR_EVENT, failed)
@@ -170,7 +170,7 @@ export function TripPage({ tripId }: { tripId: string }) {
       {node}
     </div>
   )
-  if (error) return status(<p className="error">読み込みに失敗した: {error}</p>)
+  if (error) return status(<p className="error">読み込めませんでした: {error}</p>)
   if (data === undefined || !store)
     return status(
       <>
@@ -178,28 +178,28 @@ export function TripPage({ tripId }: { tripId: string }) {
         {slow && (
           <p className="notice">
             {online
-              ? '読み込みに時間がかかっている。電波の良い場所で待つか、再読み込みする。'
-              : 'オフラインのため読み込めない。この端末で一度も開いたことのないグループは、電波が戻るまで表示できない。'}
+              ? '読み込みに時間がかかっています。電波の良い場所で待つか、再読み込みしてください。'
+              : 'オフラインのため読み込めません。この端末で一度も開いたことのないグループは、電波が戻るまで表示できません。'}
           </p>
         )}
       </>,
     )
-  if (data === null) return status(<p className="error">グループが見つからない。URLを確認する。</p>)
+  if (data === null) return status(<p className="error">グループが見つかりません。URLを確認してください。</p>)
 
   // 精算済みイベントは「すべて」から除く。個別に選べば閲覧できる
   const archivedIds = new Set(data.categories.filter((c) => c.archived).map((c) => c.id))
   const active = data.expenses.filter((e) => !archivedIds.has(catKey(e)))
   const visible = filter.length ? data.expenses.filter((e) => filter.includes(catKey(e))) : active
 
-  const run = (p: Promise<unknown>) => p.catch((e) => notify(`保存に失敗した: ${friendlyError(e)}`, { tone: 'error' }))
+  const run = (p: Promise<unknown>) => p.catch((e) => notify(`保存できませんでした: ${friendlyError(e)}`, { tone: 'error' }))
 
   async function shareText(text: string) {
     try {
       if (navigator.share) return await navigator.share({ text })
       await navigator.clipboard.writeText(text)
-      notify('精算結果をコピーした。LINE などに貼り付けられる')
+      notify('精算結果をコピーしました。LINE などに貼り付けられます')
     } catch (e) {
-      if ((e as Error).name !== 'AbortError') notify('共有できなかった', { tone: 'error' })
+      if ((e as Error).name !== 'AbortError') notify('共有できませんでした', { tone: 'error' })
     }
   }
 
@@ -272,14 +272,14 @@ export function TripPage({ tripId }: { tripId: string }) {
 
   function archiveMany() {
     const names = selectedActive.map((c) => `「${c.name}」`).join('')
-    if (!confirm(`${names}をまとめて精算済みにしてアーカイブに移す？`)) return
+    if (!confirm(`${names}をまとめて精算済みにしてアーカイブに移しますか？`)) return
     for (const c of selectedActive) run(store!.setCategoryArchived(tripId, c.id, true))
     setFilter(filter.filter((k) => !selectedActive.some((c) => c.id === k)))
   }
 
   function archive(archived: boolean, id: string) {
     const name = data!.categories.find((c) => c.id === id)?.name
-    if (archived && !confirm(`「${name}」を精算済みにしてアーカイブに移す？`)) return
+    if (archived && !confirm(`「${name}」を精算済みにしてアーカイブに移しますか？`)) return
     run(store!.setCategoryArchived(tripId, id, archived))
     if (archived) setFilter(filter.filter((k) => k !== id))
   }
@@ -357,7 +357,7 @@ export function TripPage({ tripId }: { tripId: string }) {
           onChange={(form) => setWidths((w) => ({ ...w, form }))}
           onReset={() => setWidths((w) => ({ ...w, form: undefined }))}
         />
-        {store.kind === 'local' && <p className="notice">ローカルモード: このURLを他の端末で開いてもデータは表示されない。</p>}
+        {store.kind === 'local' && <p className="notice">ローカルモード: このURLを他の端末で開いてもデータは表示されません。</p>}
         <div className="card">
           <div className="row">
             <h2 className="grow">{editing ? '支払いを編集' : '支払いを追加'}</h2>
@@ -374,7 +374,7 @@ export function TripPage({ tripId }: { tripId: string }) {
           </div>
           {editingChanged && (
             <p className="notice">
-              この支払いは編集中に他の人が更新した。保存すると上書きになる。
+              この支払いは編集中に他の人が更新しました。保存すると上書きになります。
               <button className="ghost small" onClick={() => setEditing(editingNow!)}>
                 最新の内容で編集し直す
               </button>
@@ -382,7 +382,7 @@ export function TripPage({ tripId }: { tripId: string }) {
           )}
           {editingGone ? (
             <div className="stack">
-              <p className="notice">編集中の支払いは他の人が削除した。</p>
+              <p className="notice">編集中の支払いは他の人が削除しました。</p>
               <button
                 onClick={() => {
                   setEditing(null)
@@ -403,16 +403,16 @@ export function TripPage({ tripId }: { tripId: string }) {
               onCreateCategory={(name) => store.addCategory(tripId, name)}
               readReceipt={readReceipt}
               onSubmit={async (input) => {
-                if (editingChanged && !confirm('この支払いは他の人が更新している。上書きして保存する？')) throw new Error('cancelled')
+                if (editingChanged && !confirm('この支払いは他の人が更新しています。上書きして保存しますか？')) throw new Error('cancelled')
                 const p = editing ? store.updateExpense(tripId, editing.id, input) : store.addExpense(tripId, input)
                 // 先に知らせる (受領を待った後だと、その間に出た「元に戻す」の通知を上書きしてしまう)
-                if (!editing) notify(`「${input.title}」を追加した`)
+                if (!editing) notify(`「${input.title}」を追加しました`)
                 if (navigator.onLine) {
                   // 通信できるときは受領を待つ (最大2.5秒)。拒否されたら入力を残したまま知らせる
                   try {
                     await p
                   } catch (e) {
-                    notify(`保存に失敗した: ${friendlyError(e)}`, { tone: 'error' })
+                    notify(`保存できませんでした: ${friendlyError(e)}`, { tone: 'error' })
                     throw e
                   }
                 } else {
@@ -477,7 +477,7 @@ export function TripPage({ tripId }: { tripId: string }) {
             // 確認ダイアログの代わりに、削除後しばらく「元に戻す」を出す
             if (editing?.id === e.id) setEditing(null)
             run(store.deleteExpense(tripId, e.id))
-            notify(`「${e.title}」を削除した`, { action: { label: '元に戻す', run: () => run(store.restoreExpense(tripId, e)) } })
+            notify(`「${e.title}」を削除しました`, { action: { label: '元に戻す', run: () => run(store.restoreExpense(tripId, e)) } })
           }}
         />
       </section>

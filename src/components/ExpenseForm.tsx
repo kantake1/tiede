@@ -72,25 +72,25 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
   const shares: Record<string, number> = {}
   const parsedItems: Item[] = []
   let error = ''
-  if (!title.trim()) error = '内容を入力する'
-  else if (!Number.isInteger(amount) || amount <= 0) error = '金額は1円以上の整数で入力する'
-  else if (amount > MAX_AMOUNT) error = '金額は1億円までにする'
-  else if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) error = '日付を入力する'
-  else if (!memberIdSet.has(payerId)) error = '立て替えた人を選ぶ'
+  if (!title.trim()) error = '内容を入力してください'
+  else if (!Number.isInteger(amount) || amount <= 0) error = '金額は1円以上の整数で入力してください'
+  else if (amount > MAX_AMOUNT) error = '金額は1億円までにしてください'
+  else if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) error = '日付を入力してください'
+  else if (!memberIdSet.has(payerId)) error = '立て替えた人を選んでください'
   else if (mode === 'items') {
-    if (items.length === 0) error = '品目を1つ以上追加する'
+    if (items.length === 0) error = '品目を1つ以上追加してください'
     for (const [i, it] of items.entries()) {
       if (error) break
       const price = parseNumber(it.priceText.trim().replace(/^[-−ー]/, ''))
       const sign = /^[-−ー]/.test(it.priceText.trim()) ? -1 : 1
       const memberIds = it.memberIds.filter((id) => memberIdSet.has(id))
-      if (!it.name.trim()) error = `${i + 1}行目の品名を入力する`
-      else if (!Number.isInteger(price)) error = `「${it.name}」の金額が不正`
-      else if (memberIds.length === 0) error = `「${it.name}」の対象者を選ぶ`
+      if (!it.name.trim()) error = `${i + 1}行目の品名を入力してください`
+      else if (!Number.isInteger(price)) error = `「${it.name}」の金額が正しくありません`
+      else if (memberIds.length === 0) error = `「${it.name}」の対象者を選んでください`
       else parsedItems.push({ name: it.name.trim(), price: sign * price, memberIds })
     }
-    if (!error && parsedItems.reduce((s, it) => s + it.price, 0) <= 0) error = '品目の合計が0円以下'
-  } else if (targets.length === 0) error = '対象者を1人以上選ぶ'
+    if (!error && parsedItems.reduce((s, it) => s + it.price, 0) <= 0) error = '品目の合計が0円以下です'
+  } else if (targets.length === 0) error = '対象者を1人以上選んでください'
   else {
     for (const m of targets) {
       if (mode === 'equal') shares[m.id] = 1
@@ -98,18 +98,18 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
         const raw = val(m.id).trim()
         const v = raw === '' ? (mode === 'ratio' ? 1 : NaN) : parseNumber(raw)
         if (Number.isNaN(v) || v < 0 || (mode === 'amount' && !Number.isInteger(v))) {
-          error = `${m.name} の${mode === 'ratio' ? '比率' : '金額'}が不正`
+          error = `${m.name} の${mode === 'ratio' ? '比率' : '金額'}が正しくありません`
           break
         }
         if (v > 0) shares[m.id] = v
       }
     }
-    if (!error && Object.keys(shares).length === 0) error = '負担する人がいない'
+    if (!error && Object.keys(shares).length === 0) error = '負担する人がいません'
   }
 
   const assigned = mode === 'amount' ? targets.reduce((s, m) => s + (parseNumber(val(m.id)) || 0), 0) : 0
   if (!error && mode === 'amount' && assigned !== amount) {
-    error = `指定額の合計 ${yen(assigned)} が金額 ${yen(amount)} と一致しない (${assigned < amount ? '残り' : '超過'} ${yen(Math.abs(amount - assigned))})`
+    error = `指定額の合計 ${yen(assigned)} が金額 ${yen(amount)} と一致しません (${assigned < amount ? '残り' : '超過'} ${yen(Math.abs(amount - assigned))})`
   }
 
   const itemsTotal = parsedItems.reduce((s, it) => s + it.price, 0)
@@ -140,13 +140,13 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
     setReadError('')
     try {
       const r = await readReceipt(file)
-      if (r.items.length === 0) throw new Error('品目を読み取れなかった')
+      if (r.items.length === 0) throw new Error('品目を読み取れませんでした')
       setItems(r.items.map((it) => ({ name: it.name, priceText: String(it.price), memberIds: allIds() })))
       if (r.total > 0) setAmountText(String(r.total))
       if (!title.trim() && r.storeName) setTitle(r.storeName)
       setMode('items')
     } catch (e) {
-      setReadError(`読み取りに失敗した: ${friendlyError(e)}`)
+      setReadError(`読み取れませんでした: ${friendlyError(e)}`)
     } finally {
       setReading(false)
     }
@@ -159,7 +159,7 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
     try {
       setCategoryId(await onCreateCategory(name))
     } catch (e) {
-      alert(`イベントの作成に失敗した: ${(e as Error).message}`)
+      alert(`イベントを作成できませんでした: ${(e as Error).message}`)
     }
   }
 
@@ -198,7 +198,7 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
 
   const allOn = targets.length === members.length
 
-  if (members.length === 0) return <p className="notice">支払いを記録するには、先に「設定」からメンバーを追加する。</p>
+  if (members.length === 0) return <p className="notice">支払いを記録するには、先に「設定」からメンバーを追加してください。</p>
 
   return (
     <form className="expense-form stack" onSubmit={submit}>
@@ -210,7 +210,7 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
               <input type="file" accept="image/*" hidden disabled={reading} onChange={(e) => onReceipt(e.target.files?.[0])} />
               <Camera size={18} /> {reading ? '読み取り中…' : 'レシートを読み取る'}
             </label>
-            <span className="muted small">品目と合計を自動入力する (画像は保存しない)</span>
+            <span className="muted small">品目と合計を自動入力します (画像は保存しません)</span>
             {readError && <p className="error small">{readError}</p>}
           </div>
         )}
@@ -417,7 +417,7 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
 
         {error && (title || amountText || items.length > 0) && <p className="error small">{error}</p>}
         {preview && mode !== 'items' && preview[payerId] !== undefined && !shares[payerId] && preview[payerId] > 0 && (
-          <p className="muted small">端数 {yen(preview[payerId])} は立て替えた人の負担になる。</p>
+          <p className="muted small">端数 {yen(preview[payerId])} は立て替えた人の負担になります。</p>
         )}
 
         <div className="row">
