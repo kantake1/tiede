@@ -47,6 +47,6 @@
 ## 未完了・次の候補
 
 - Firebase プロジェクト `tiede-8eae4` (Firestore: asia-northeast1, Standard)。ルールはデプロイ・検証済み。Hosting は未デプロイ
-- App Check: reCAPTCHA Enterprise で設定済み (AI Logic は強制有効)。開発時は `.env.local` の `VITE_APPCHECK_DEBUG_TOKEN` (コンソール登録済み) を使う
+- App Check: reCAPTCHA v3 (Enterprise は課金アカウントが必要なため不採用) (AI Logic は強制有効)。開発時は `.env.local` の `VITE_APPCHECK_DEBUG_TOKEN` (コンソール登録済み) を使う
 - 候補: 公開先の決定 (Firebase Hosting 想定で `firebase.json` 用意済み)。公開後に実機 iPhone で PWA・Safari を確認する
 - Service Worker のキャッシュ名は固定 (`tiede-v1`)。古いビルドのファイルが溜まるため、大きな変更時は名前を上げる

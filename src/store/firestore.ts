@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app'
-import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check'
+import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check'
 import {
   collection,
   deleteDoc,
@@ -26,13 +26,14 @@ export const app = initializeApp({
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 })
 
-// Firebase AI Logic は App Check 必須。開発時は登録済みデバッグトークンで代替する
+// Firebase AI Logic は App Check 必須。reCAPTCHA v3 を使う (Enterprise は課金アカウントが必要なため)。
+// 開発時は登録済みデバッグトークンで代替する
 if (import.meta.env.VITE_RECAPTCHA_SITE_KEY) {
   if (import.meta.env.DEV && import.meta.env.VITE_APPCHECK_DEBUG_TOKEN) {
     ;(self as { FIREBASE_APPCHECK_DEBUG_TOKEN?: string }).FIREBASE_APPCHECK_DEBUG_TOKEN = import.meta.env.VITE_APPCHECK_DEBUG_TOKEN
   }
   initializeAppCheck(app, {
-    provider: new ReCaptchaEnterpriseProvider(import.meta.env.VITE_RECAPTCHA_SITE_KEY),
+    provider: new ReCaptchaV3Provider(import.meta.env.VITE_RECAPTCHA_SITE_KEY),
     isTokenAutoRefreshEnabled: true,
   })
 }

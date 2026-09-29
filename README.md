@@ -45,10 +45,10 @@ npm run preview  # ビルド成果物のプレビュー
 ### 2. Firebase AI Logic の有効化
 レシート読み取り機能を使用するため、Firebase コンソールまたは Google Cloud コンソールで **AI Logic** (Gemini Developer API) を有効化します。
 
-### 3. App Check (reCAPTCHA Enterprise) の設定
+### 3. App Check (reCAPTCHA v3) の設定
 Firebase AI Logic の呼び出し保護に App Check が必須です。
 1. Firebase コンソール > **App Check** を開きます。
-2. アプリに **reCAPTCHA Enterprise** プロバイダを登録し、サイトキーを取得します。
+2. https://www.google.com/recaptcha/admin で **reCAPTCHA v3** の鍵を作成し (ドメインは公開先のみ)、App Check のアプリに reCAPTCHA プロバイダとしてシークレットを登録します。reCAPTCHA Enterprise は課金アカウントが必要なため使いません。
 3. **開発環境用デバッグトークン**: App Check のアプリメニュー >「デバッグトークンの管理」を開き、生成したデバッグトークン (UUID) を登録します。
 
 ### 4. 環境変数の設定 (`.env.local`)
@@ -62,7 +62,7 @@ VITE_FIREBASE_PROJECT_ID=<Firebase プロジェクトID>
 VITE_FIREBASE_APP_ID=<Firebase アプリID>
 
 # App Check
-VITE_RECAPTCHA_SITE_KEY=<reCAPTCHA Enterprise サイトキー>
+VITE_RECAPTCHA_SITE_KEY=<reCAPTCHA v3 サイトキー>
 VITE_APPCHECK_DEBUG_TOKEN=<コンソールに登録したデバッグUUID (開発環境のみ)>
 ```
 
