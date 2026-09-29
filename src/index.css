@@ -601,6 +601,25 @@ label.button.disabled {
   font-size: 1.125rem;
 }
 
+.apphead-sep {
+  margin: 0 10px;
+  color: var(--muted-soft);
+}
+
+.apphead-name {
+  font-size: 1rem;
+  font-weight: 600;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* デスクトップではグループ名は見出しに出すので、サイドバーの表示は省く */
+.sb-title {
+  display: none;
+}
+
 .sb-top {
   display: flex;
   justify-content: flex-end;
@@ -862,6 +881,11 @@ dialog.settings::backdrop {
     display: revert;
   }
 
+  .sb-title,
+  .layout.collapsed .sb-title {
+    display: block;
+  }
+
   .sb-head {
     display: flex;
   }
@@ -1037,4 +1061,55 @@ details[open] > summary .chevron {
 
 .sb-archive .sb-cats .grow label {
   color: var(--muted);
+}
+
+/* ===== サイドバーのアニメーション ===== */
+/* 幅 (--sb) を補間できるよう型を登録し、格納・展開で列幅を滑らかに変える */
+@property --sb {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 240px;
+}
+
+.layout {
+  transition: --sb 0.22s ease;
+}
+
+/* ドラッグ中は追従を優先してアニメーションしない */
+body.resizing .layout {
+  transition: none;
+}
+
+/* 幅が変わる途中で文字が折り返さないよう、中身の幅を固定して切り取る */
+.sidebar nav {
+  min-width: 156px;
+}
+
+.sb-foot .sb-label {
+  white-space: nowrap;
+}
+
+.sb-label {
+  animation: sb-fade 0.22s ease;
+}
+
+@keyframes sb-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* 引き出し時の背景を徐々に暗く */
+.layout.drawer-open .backdrop {
+  animation: sb-fade 0.2s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .layout,
+  .sidebar,
+  .sb-label,
+  .layout.drawer-open .backdrop {
+    transition: none;
+    animation: none;
+  }
 }

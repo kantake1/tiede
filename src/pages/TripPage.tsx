@@ -191,6 +191,12 @@ export function TripPage({ tripId }: { tripId: string }) {
         <a href="#/" className="logo">
           tiede
         </a>
+        <span className="apphead-sep" aria-hidden>
+          /
+        </span>
+        <h1 className="apphead-name" onClick={rename} title="クリックして名前を変更">
+          {data.trip.name}
+        </h1>
       </header>
       <Sidebar
         tripName={data.trip.name}
