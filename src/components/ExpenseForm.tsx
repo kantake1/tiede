@@ -34,7 +34,7 @@ const MAX_AMOUNT = 100_000_000
 export function ExpenseForm({ members, categories, initial, defaultCategoryId, onCreateCategory, readReceipt, onSubmit, onCancel }: Props) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [amountText, setAmountText] = useState(initial ? String(initial.amount) : '')
-  const [payerId, setPayerId] = useState(initial?.payerId ?? members[0]?.id ?? '')
+  const [payerChoice, setPayerId] = useState(initial?.payerId ?? members[0]?.id ?? '')
   const [mode, setMode] = useState<SplitMode>(initial?.mode ?? 'equal')
   const [categoryId, setCategoryId] = useState(initial ? (initial.categoryId ?? '') : defaultCategoryId)
   const [memo, setMemo] = useState(initial?.memo ?? '')
@@ -65,6 +65,8 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
   const amount = parseNumber(amountText)
   const targets = members.filter((m) => isIn(m.id))
   const memberIdSet = new Set(members.map((m) => m.id))
+  // 選んでいた人が他の端末で削除されたら先頭のメンバーに切り替える (表示と中身のずれを防ぐ)
+  const payerId = memberIdSet.has(payerChoice) ? payerChoice : (members[0]?.id ?? '')
 
   // shares / items を組み立てつつ入力エラーを検出する
   const shares: Record<string, number> = {}
@@ -79,7 +81,7 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
     if (items.length === 0) error = '品目を1つ以上追加する'
     for (const [i, it] of items.entries()) {
       if (error) break
-      const price = parseNumber(it.priceText.replace(/^[-−ー]/, ''))
+      const price = parseNumber(it.priceText.trim().replace(/^[-−ー]/, ''))
       const sign = /^[-−ー]/.test(it.priceText.trim()) ? -1 : 1
       const memberIds = it.memberIds.filter((id) => memberIdSet.has(id))
       if (!it.name.trim()) error = `${i + 1}行目の品名を入力する`
@@ -178,6 +180,7 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
         date,
       })
       if (!initial) {
+        // 保存に失敗した (onSubmit が例外) 場合はここに来ないので、入力は残る
         setTitle('')
         setAmountText('')
         setMemo('')
@@ -186,6 +189,8 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
         setIncluded(Object.fromEntries(members.map((m) => [m.id, true])))
         setMode('equal')
       }
+    } catch {
+      // 失敗の通知は呼び出し側が行う。入力内容はそのまま残して再送できるようにする
     } finally {
       setBusy(false)
     }
@@ -197,217 +202,235 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
 
   return (
     <form className="expense-form stack" onSubmit={submit}>
-      {readReceipt && (
-        <div className="receipt">
-          <label className={`button ${reading ? 'disabled' : ''}`}>
-            <input type="file" accept="image/*" hidden disabled={reading} onChange={(e) => onReceipt(e.target.files?.[0])} />
-            <Camera size={18} /> {reading ? '読み取り中…' : 'レシートを読み取る'}
-          </label>
-          <span className="muted small">品目と合計を自動入力する (画像は保存しない)</span>
-          {readError && <p className="error small">{readError}</p>}
-        </div>
-      )}
+      {/* 保存の受領を待つ間は入力させない (待ち終わりのリセットで打ち込み中の内容が消えるため) */}
+      <fieldset className="form-fields" disabled={busy}>
+        {readReceipt && (
+          <div className="receipt">
+            <label className={`button ${reading ? 'disabled' : ''}`}>
+              <input type="file" accept="image/*" hidden disabled={reading} onChange={(e) => onReceipt(e.target.files?.[0])} />
+              <Camera size={18} /> {reading ? '読み取り中…' : 'レシートを読み取る'}
+            </label>
+            <span className="muted small">品目と合計を自動入力する (画像は保存しない)</span>
+            {readError && <p className="error small">{readError}</p>}
+          </div>
+        )}
 
-      <div className="grid2">
+        <div className="grid2">
+          <label>
+            内容
+            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="例: 夕食" maxLength={100} />
+          </label>
+          <label>
+            金額 (円)
+            <input value={amountText} onChange={(e) => setAmountText(e.target.value)} inputMode="numeric" placeholder="12000" />
+          </label>
+        </div>
+        <div className="grid2">
+          <label>
+            立て替えた人
+            <select value={payerId} onChange={(e) => setPayerId(e.target.value)}>
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            日付
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+          </label>
+        </div>
         <label>
-          内容
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="例: 夕食" maxLength={100} />
-        </label>
-        <label>
-          金額 (円)
-          <input value={amountText} onChange={(e) => setAmountText(e.target.value)} inputMode="numeric" placeholder="12000" />
-        </label>
-      </div>
-      <div className="grid2">
-        <label>
-          立て替えた人
-          <select value={payerId} onChange={(e) => setPayerId(e.target.value)}>
-            {members.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
+          カテゴリ
+          <select value={categoryId} onChange={(e) => onCategoryChange(e.target.value)}>
+            <option value="">未分類</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
               </option>
             ))}
+            <option value={NEW_CATEGORY}>＋ 新しいカテゴリ…</option>
           </select>
         </label>
-        <label>
-          日付
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
-        </label>
-      </div>
-      <label>
-        カテゴリ
-        <select value={categoryId} onChange={(e) => onCategoryChange(e.target.value)}>
-          <option value="">未分類</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-          <option value={NEW_CATEGORY}>＋ 新しいカテゴリ…</option>
-        </select>
-      </label>
 
-      <div>
-        <div className="label-row">
-          <span>割り方</span>
-          <div className="segmented" role="radiogroup">
-            {MODES.map((o) => (
-              <button
-                type="button"
-                key={o.value}
-                role="radio"
-                aria-checked={mode === o.value}
-                className={mode === o.value ? 'active' : ''}
-                onClick={() => setMode(o.value)}
-              >
-                {o.label}
-              </button>
-            ))}
+        <div>
+          <div className="label-row">
+            <span>割り方</span>
+            <div className="segmented" role="radiogroup">
+              {MODES.map((o) => (
+                <button
+                  type="button"
+                  key={o.value}
+                  role="radio"
+                  aria-checked={mode === o.value}
+                  className={mode === o.value ? 'active' : ''}
+                  onClick={() => setMode(o.value)}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {mode === 'items' ? (
-          <>
-            <ul className="items">
-              {items.map((it, i) => (
-                <li key={i}>
-                  <div className="row">
-                    <input
-                      className="grow"
-                      value={it.name}
-                      onChange={(e) => updateItem(i, { name: e.target.value })}
-                      placeholder="品名"
-                      aria-label={`${i + 1}行目の品名`}
-                      maxLength={100}
-                    />
-                    <input
-                      className="price-input"
-                      value={it.priceText}
-                      onChange={(e) => updateItem(i, { priceText: e.target.value })}
-                      inputMode="numeric"
-                      placeholder="0"
-                      aria-label={`${i + 1}行目の金額`}
-                    />
-                    <button type="button" className="ghost small danger" onClick={() => setItems(items.filter((_, j) => j !== i))} aria-label={`${i + 1}行目を削除`}>
-                      <X size={16} />
-                    </button>
-                  </div>
-                  <div className="chips">
-                    {members.map((m) => (
+          {mode === 'items' ? (
+            <>
+              <ul className="items">
+                {items.map((it, i) => (
+                  <li key={i}>
+                    <div className="row">
+                      <input
+                        className="grow"
+                        value={it.name}
+                        onChange={(e) => updateItem(i, { name: e.target.value })}
+                        placeholder="品名"
+                        aria-label={`${i + 1}行目の品名`}
+                        maxLength={100}
+                      />
+                      <input
+                        className="price-input"
+                        value={it.priceText}
+                        onChange={(e) => updateItem(i, { priceText: e.target.value })}
+                        inputMode="numeric"
+                        placeholder="0"
+                        aria-label={`${i + 1}行目の金額`}
+                      />
                       <button
                         type="button"
-                        key={m.id}
-                        className={`chip toggle ${it.memberIds.includes(m.id) ? 'on' : ''}`}
-                        aria-pressed={it.memberIds.includes(m.id)}
-                        onClick={() => toggleItemMember(i, m.id)}
+                        className="ghost small danger"
+                        onClick={() => setItems(items.filter((_, j) => j !== i))}
+                        aria-label={`${i + 1}行目を削除`}
                       >
-                        {m.name}
+                        <X size={16} />
                       </button>
-                    ))}
-                  </div>
-                </li>
-              ))}
-            </ul>
-            <div className="label-row">
-              <button type="button" className="ghost small with-icon" onClick={() => setItems([...items, { name: '', priceText: '', memberIds: allIds() }])}>
-                <Plus size={16} /> 品目を追加
-              </button>
-              {parsedItems.length > 0 && (
-                <span className="small muted">
-                  品目合計 {yen(itemsTotal)}
-                  {Number.isInteger(amount) && amount !== itemsTotal && ` / 差額 ${yen(amount - itemsTotal)} は按分`}
-                  {amountText.trim() === '' && (
-                    <button type="button" className="ghost small" onClick={() => setAmountText(String(itemsTotal))}>
-                      金額に反映
-                    </button>
-                  )}
-                </span>
-              )}
-            </div>
-            {preview && (
-              <ul className="participants">
-                {members
-                  .filter((m) => preview[m.id])
-                  .map((m) => (
-                    <li key={m.id}>
-                      <span>{m.name}</span>
-                      <span className="owed">{yen(preview[m.id])}</span>
-                    </li>
-                  ))}
+                    </div>
+                    <div className="chips">
+                      {members.map((m) => (
+                        <button
+                          type="button"
+                          key={m.id}
+                          className={`chip toggle ${it.memberIds.includes(m.id) ? 'on' : ''}`}
+                          aria-pressed={it.memberIds.includes(m.id)}
+                          onClick={() => toggleItemMember(i, m.id)}
+                        >
+                          {m.name}
+                        </button>
+                      ))}
+                    </div>
+                  </li>
+                ))}
               </ul>
-            )}
-          </>
-        ) : (
-          <>
-            <div className="label-row">
-              <span className="muted small">対象者</span>
-              <button
-                type="button"
-                className="ghost small"
-                onClick={() => setIncluded(Object.fromEntries(members.map((m) => [m.id, !allOn])))}
-              >
-                {allOn ? '全解除' : '全員'}
-              </button>
-            </div>
-            <ul className="participants">
-              {members.map((m) => (
-                <li key={m.id} className={isIn(m.id) ? '' : 'off'}>
-                  <label className="check">
-                    <input
-                      type="checkbox"
-                      checked={isIn(m.id)}
-                      onChange={(e) => setIncluded({ ...included, [m.id]: e.target.checked })}
-                    />
-                    {m.name}
-                  </label>
-                  {mode !== 'equal' && isIn(m.id) && (
-                    <input
-                      className="share-input"
-                      value={val(m.id)}
-                      onChange={(e) => setValues({ ...values, [m.id]: e.target.value })}
-                      inputMode="decimal"
-                      placeholder={mode === 'ratio' ? '1' : '0'}
-                      aria-label={`${m.name} の${mode === 'ratio' ? '比率' : '金額'}`}
-                    />
-                  )}
-                  <span className="owed">{preview && preview[m.id] ? yen(preview[m.id]) : ''}</span>
-                </li>
-              ))}
-            </ul>
-            {mode === 'amount' && Number.isInteger(amount) && amount > 0 && (
               <div className="label-row">
-                <span className={`small ${assigned === amount ? 'muted' : 'error'}`}>
-                  合計 {yen(assigned)} / {yen(amount)}
-                </span>
-                <button type="button" className="ghost small" onClick={fillRemainder}>
-                  残りを空欄の人で均等割り
+                <button
+                  type="button"
+                  className="ghost small with-icon"
+                  onClick={() => setItems([...items, { name: '', priceText: '', memberIds: allIds() }])}
+                >
+                  <Plus size={16} /> 品目を追加
+                </button>
+                {parsedItems.length > 0 && (
+                  <span className="small muted">
+                    品目合計 {yen(itemsTotal)}
+                    {Number.isInteger(amount) && amount !== itemsTotal && ` / 差額 ${yen(amount - itemsTotal)} は按分`}
+                    {amountText.trim() === '' && (
+                      <button type="button" className="ghost small" onClick={() => setAmountText(String(itemsTotal))}>
+                        金額に反映
+                      </button>
+                    )}
+                  </span>
+                )}
+              </div>
+              {preview && (
+                <ul className="participants">
+                  {members
+                    .filter((m) => preview[m.id])
+                    .map((m) => (
+                      <li key={m.id}>
+                        <span>{m.name}</span>
+                        <span className="owed">{yen(preview[m.id])}</span>
+                      </li>
+                    ))}
+                </ul>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="label-row">
+                <span className="muted small">対象者</span>
+                <button
+                  type="button"
+                  className="ghost small"
+                  onClick={() => setIncluded(Object.fromEntries(members.map((m) => [m.id, !allOn])))}
+                >
+                  {allOn ? '全解除' : '全員'}
                 </button>
               </div>
-            )}
-          </>
+              <ul className="participants">
+                {members.map((m) => (
+                  <li key={m.id} className={isIn(m.id) ? '' : 'off'}>
+                    <label className="check">
+                      <input
+                        type="checkbox"
+                        checked={isIn(m.id)}
+                        onChange={(e) => setIncluded({ ...included, [m.id]: e.target.checked })}
+                      />
+                      {m.name}
+                    </label>
+                    {mode !== 'equal' && isIn(m.id) && (
+                      <input
+                        className="share-input"
+                        value={val(m.id)}
+                        onChange={(e) => setValues({ ...values, [m.id]: e.target.value })}
+                        inputMode="decimal"
+                        placeholder={mode === 'ratio' ? '1' : '0'}
+                        aria-label={`${m.name} の${mode === 'ratio' ? '比率' : '金額'}`}
+                      />
+                    )}
+                    <span className="owed">{preview && preview[m.id] ? yen(preview[m.id]) : ''}</span>
+                  </li>
+                ))}
+              </ul>
+              {mode === 'amount' && Number.isInteger(amount) && amount > 0 && (
+                <div className="label-row">
+                  <span className={`small ${assigned === amount ? 'muted' : 'error'}`}>
+                    合計 {yen(assigned)} / {yen(amount)}
+                  </span>
+                  <button type="button" className="ghost small" onClick={fillRemainder}>
+                    残りを空欄の人で均等割り
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        <label>
+          メモ
+          <textarea
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+            rows={2}
+            maxLength={1000}
+            placeholder="例: 駐車場代込み。Aさんは途中参加"
+          />
+        </label>
+
+        {error && (title || amountText || items.length > 0) && <p className="error small">{error}</p>}
+        {preview && mode !== 'items' && preview[payerId] !== undefined && !shares[payerId] && preview[payerId] > 0 && (
+          <p className="muted small">端数 {yen(preview[payerId])} は立て替えた人の負担になる。</p>
         )}
-      </div>
 
-      <label>
-        メモ
-        <textarea value={memo} onChange={(e) => setMemo(e.target.value)} rows={2} maxLength={1000} placeholder="例: 駐車場代込み。Aさんは途中参加" />
-      </label>
-
-      {error && (title || amountText || items.length > 0) && <p className="error small">{error}</p>}
-      {preview && mode !== 'items' && preview[payerId] !== undefined && !shares[payerId] && preview[payerId] > 0 && (
-        <p className="muted small">端数 {yen(preview[payerId])} は立て替えた人の負担になる。</p>
-      )}
-
-      <div className="row">
-        <button type="submit" className="primary grow" disabled={!!error || busy}>
-          {initial ? '更新' : '追加'}
-        </button>
-        {onCancel && (
-          <button type="button" onClick={onCancel}>
-            キャンセル
+        <div className="row">
+          <button type="submit" className="primary grow" disabled={!!error || busy}>
+            {initial ? '更新' : '追加'}
           </button>
-        )}
-      </div>
+          {onCancel && (
+            <button type="button" onClick={onCancel}>
+              キャンセル
+            </button>
+          )}
+        </div>
+      </fieldset>
     </form>
   )
 }

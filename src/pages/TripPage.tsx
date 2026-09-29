@@ -369,9 +369,21 @@ export function TripPage({ tripId }: { tripId: string }) {
               onCreateCategory={(name) => store.addCategory(tripId, name)}
               readReceipt={readReceipt}
               onSubmit={async (input) => {
-                // 端末には即反映されるので、サーバーの受領を待たずに閉じる (失敗は通知で知らせる)
-                run(editing ? store.updateExpense(tripId, editing.id, input) : store.addExpense(tripId, input))
+                const p = editing ? store.updateExpense(tripId, editing.id, input) : store.addExpense(tripId, input)
+                // 先に知らせる (受領を待った後だと、その間に出た「元に戻す」の通知を上書きしてしまう)
                 if (!editing) notify(`「${input.title}」を追加した`)
+                if (navigator.onLine) {
+                  // 通信できるときは受領を待つ (最大2.5秒)。拒否されたら入力を残したまま知らせる
+                  try {
+                    await p
+                  } catch (e) {
+                    notify(`保存に失敗した: ${friendlyError(e)}`, { tone: 'error' })
+                    throw e
+                  }
+                } else {
+                  // 圏外では端末に即反映されるので待たずに閉じる (送信は電波が戻ってから)
+                  run(p)
+                }
                 setEditing(null)
                 setSheet(false)
               }}

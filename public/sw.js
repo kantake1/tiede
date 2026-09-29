@@ -2,6 +2,14 @@
 // データ (Firestore) は Firebase SDK が IndexedDB に保持するので、ここでは扱わない。
 const CACHE = 'tiede-v1'
 
+// 初回訪問ではページの読み込みが SW の起動より先に終わり、JS/CSS が保存されない。
+// ページから読み込み済みファイルの一覧を受け取って保存し、次回から圏外でも起動できるようにする
+self.addEventListener('message', (event) => {
+  if (event.data?.type !== 'cache-urls') return
+  const urls = event.data.urls.filter((u) => new URL(u).origin === self.location.origin)
+  event.waitUntil(caches.open(CACHE).then((c) => Promise.all(urls.map((u) => c.match(u).then((hit) => hit || c.add(u).catch(() => {}))))))
+})
+
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', './manifest.webmanifest', './favicon.svg'])))
   self.skipWaiting()
@@ -27,11 +35,14 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          const copy = res.clone()
-          caches.open(CACHE).then((c) => c.put('./', copy))
+          // エラー応答や別ページへの転送 (公衆 Wi-Fi のログイン画面など) では保存済みを上書きしない
+          if (res.ok && !res.redirected) {
+            const copy = res.clone()
+            caches.open(CACHE).then((c) => c.put('./', copy))
+          }
           return res
         })
-        .catch(() => caches.match('./')),
+        .catch(() => caches.match('./').then((hit) => hit || Response.error())),
     )
     return
   }
@@ -49,7 +60,7 @@ self.addEventListener('fetch', (event) => {
             }
             return res
           }),
-      ),
+      ).catch(() => Response.error()),
     )
     return
   }
@@ -65,7 +76,7 @@ self.addEventListener('fetch', (event) => {
           }
           return res
         })
-        .catch(() => hit)
+        .catch(() => hit || Response.error())
       return hit || net
     }),
   )

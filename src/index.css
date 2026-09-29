@@ -1233,3 +1233,11 @@ body.resizing .layout {
   background: var(--notice);
   border: 1px solid var(--notice-border);
 }
+
+/* 入力フォームの fieldset は見た目に影響させない (無効化にだけ使う) */
+.form-fields {
+  display: contents;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
