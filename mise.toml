@@ -1,0 +1,3 @@
+[tools]
+# Firebase エミュレータに必要
+java = "temurin-21"
