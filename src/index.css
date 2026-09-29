@@ -1285,13 +1285,25 @@ body.resizing .layout {
   text-align: center;
 }
 
+/* 名前のロゴタイプ: Zen Maru Gothic Black (OFL) の「おあいこ」4文字だけを切り出して同梱 */
+@font-face {
+  font-family: 'Oaiko Wordmark';
+  src: url('/fonts/oaiko-wordmark-v1.woff2') format('woff2');
+  font-weight: 900;
+  font-display: swap;
+}
+
 /* ロゴ (マーク + 名前) */
 .brand {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  font-family: 'Oaiko Wordmark', -apple-system, system-ui, sans-serif;
+  font-weight: 900;
+  font-size: 1.2rem;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--text);
 }
 
 .brand img {

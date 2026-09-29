@@ -60,6 +60,7 @@
 - 名前「おあいこ」= お互いさま・貸し借りなし。マークは丸みの強い Rausch の角丸四角 (角丸 20/64) に、寄り添う2つの丸い「おもち」(白と淡いピンク #ffe4ea、半径13) が並ぶ形。それぞれ点の目・小さな笑顔・頬の赤み (#ffb3c1)。手前の白いおもちの縁を Rausch で抜いて重なりを表す。
 - 元データは `public/favicon.svg` (viewBox 64)。PWA アイコン (`public/icon-*.png`、`apple-touch-icon.png`) はこの SVG をブラウザで描画して書き出す。maskable は背景を全面にし、絵柄を80%に縮めて安全領域に収める。
 - 絵柄を変えたら、アイコンの URL の版番号 (`?v=3`、index.html・manifest・Logo.tsx・sw.js) と Service Worker のキャッシュ名を上げる (端末に残る古いアイコンを確実に置き換えるため)。
+- ロゴタイプ (名前): 「おあいこ」を Zen Maru Gothic Black (900, OFL) で。おもちの丸みに合わせた丸ゴシックで、色は墨 (`--text`)、字間 0.04em、マークとの間隔 8px。主要色は文字に使わない (マークと色が重なり主張が強すぎるため)。4文字だけを切り出した `public/fonts/oaiko-wordmark-v1.woff2` (約1.4KB、ライセンスは同フォルダの OFL-ZenMaruGothic.txt) を同梱し、圏外でも崩れない。他の文字には使わない。
 - 画面内は `src/components/Logo.tsx` (favicon.svg を24pxで表示 + 名前、太字)。
 
 ## アイコン
