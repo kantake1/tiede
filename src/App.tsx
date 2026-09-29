@@ -27,7 +27,7 @@ export default function App() {
     <div className="container">
       <header className="app-header center">
         <a href="/" className="logo">
-          <Logo />
+          <Logo variant="lockup" />
         </a>
       </header>
       <Home />

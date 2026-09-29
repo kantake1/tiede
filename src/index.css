@@ -1297,7 +1297,6 @@ body.resizing .layout {
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
   font-family: 'Oaiko Wordmark', -apple-system, system-ui, sans-serif;
   font-weight: 900;
   font-size: 1.2rem;
@@ -1306,6 +1305,17 @@ body.resizing .layout {
   color: var(--text);
 }
 
-.brand img {
+/* ロゴ3: マーク高 = 文字の実高さ 0.92em × 1.6、間隔 = マーク高 × 0.25 */
+.brand.lockup {
+  gap: 0.368em;
+}
+
+.brand.lockup img {
+  height: 1.472em;
+  width: auto;
   flex-shrink: 0;
+}
+
+.app-header .brand.lockup {
+  font-size: 1.5rem;
 }
