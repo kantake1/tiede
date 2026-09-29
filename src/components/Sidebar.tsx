@@ -36,8 +36,11 @@ export function Sidebar(p: Props) {
 
   return (
     <aside className="sidebar" aria-label="サイドバー">
-      {/* デスクトップ: 格納ボタンはサイドバー上端の右 (格納時はボタンのみ) */}
+      {/* デスクトップ: グループ名を左詰め、格納ボタンを右 (格納時はボタンのみ) */}
       <div className="sb-top">
+        <h1 className="sb-label sb-group" onClick={p.onRename} title="クリックして名前を変更">
+          {p.tripName}
+        </h1>
         <button
           className="ghost icon sb-collapse"
           onClick={p.onToggleCollapse}

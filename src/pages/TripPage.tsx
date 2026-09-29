@@ -23,6 +23,8 @@ const loadCollapsed = () => {
   }
 }
 
+const WIDE_QUERY = '(min-width: 1440px)'
+
 // 列幅 (px)。未設定なら CSS の既定値
 type Widths = { sb?: number; form?: number }
 const WIDTHS_KEY = 'tiede:layout-widths'
@@ -53,6 +55,14 @@ export function TripPage({ tripId }: { tripId: string }) {
   // デスクトップでの格納状態 (端末に保存) / タブレット・スマホでの引き出し / スマホでの入力画面
   const [collapsed, setCollapsed] = useState(loadCollapsed)
   const [drawer, setDrawer] = useState(false)
+  // 十分な幅 (1440px 以上) では格納する必要がないため、常に展開する
+  const [wide, setWide] = useState(() => matchMedia(WIDE_QUERY).matches)
+  useEffect(() => {
+    const mq = matchMedia(WIDE_QUERY)
+    const on = () => setWide(mq.matches)
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
   const [sheet, setSheet] = useState(false)
   const settingsRef = useRef<HTMLDialogElement>(null)
   const [widths, setWidths] = useState<Widths>(loadWidths)
@@ -270,20 +280,14 @@ export function TripPage({ tripId }: { tripId: string }) {
 
   return (
     <div
-      className={`layout ${collapsed ? 'collapsed' : ''} ${drawer ? 'drawer-open' : ''} ${sheet ? 'sheet-open' : ''}`}
+      className={`layout ${collapsed && !wide ? 'collapsed' : ''} ${drawer ? 'drawer-open' : ''} ${sheet ? 'sheet-open' : ''}`}
       style={layoutStyle}
     >
-      {/* デスクトップの上部見出し。サイドバーの状態に関わらず表示 */}
+      {/* デスクトップの上部見出し。ロゴは中央 (グループ名はサイドバー上端) */}
       <header className="apphead">
         <a href="/" className="logo">
           <Logo />
         </a>
-        <span className="apphead-sep" aria-hidden>
-          /
-        </span>
-        <h1 className="apphead-name" onClick={rename} title="クリックして名前を変更">
-          {data.trip.name}
-        </h1>
         {syncLabel && <span className={`sync ${online ? '' : 'offline'}`}>{syncLabel}</span>}
       </header>
       <Sidebar
@@ -299,7 +303,7 @@ export function TripPage({ tripId }: { tripId: string }) {
         onSettings={() => settingsRef.current?.showModal()}
         onShare={share}
         copied={copied}
-        collapsed={collapsed}
+        collapsed={collapsed && !wide}
         onToggleCollapse={toggleCollapsed}
         onClose={() => setDrawer(false)}
       />
