@@ -1,34 +1,49 @@
+/* デザイントークン。docs/design/DESIGN.md (Airbnb ベース) を参照 */
 :root {
-  --bg: #f6f7f9;
+  --bg: #ffffff;
+  --surface-soft: #f7f7f7;
+  --surface-strong: #f2f2f2;
   --card: #ffffff;
-  --text: #1c1f24;
-  --muted: #6b7280;
-  --border: #e3e6ea;
-  --accent: #2563eb;
+  --text: #222222;
+  --body: #3f3f3f;
+  --muted: #6a6a6a;
+  --muted-soft: #929292;
+  --border: #dddddd;
+  --border-strong: #c1c1c1;
+  --accent: #ff385c;
+  --accent-active: #e00b41;
+  --accent-disabled: #ffd1da;
   --accent-text: #ffffff;
-  --accent-soft: #e8efff;
-  --plus: #15803d;
-  --minus: #c2410c;
-  --danger: #dc2626;
-  --notice: #fff7e0;
+  --plus: #008a05;
+  --minus: #c13515;
+  --danger: #c13515;
+  --scrim: rgb(0 0 0 / 0.5);
+  --shadow-float: rgb(0 0 0 / 0.02) 0 0 0 1px, rgb(0 0 0 / 0.04) 0 2px 6px 0, rgb(0 0 0 / 0.1) 0 4px 8px 0;
+  --notice: #fff8e6;
   --notice-border: #f2d68a;
   color-scheme: light;
-  font-family: system-ui, -apple-system, 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  font-family: Inter, -apple-system, system-ui, 'Hiragino Sans', 'Noto Sans JP', Roboto, 'Helvetica Neue', sans-serif;
   line-height: 1.5;
 }
 
+/* Airbnb にダークモードは無いため、同じ役割を暗色に置き換えた独自定義 */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #111418;
-    --card: #1b1f25;
-    --text: #e8eaed;
-    --muted: #9aa1ab;
-    --border: #2e343c;
-    --accent: #5b8def;
-    --accent-soft: #1f2d4a;
-    --plus: #4ade80;
-    --minus: #fb923c;
-    --danger: #f87171;
+    --bg: #121212;
+    --surface-soft: #1e1e1e;
+    --surface-strong: #262626;
+    --card: #181818;
+    --text: #f2f2f2;
+    --body: #d0d0d0;
+    --muted: #a3a3a3;
+    --muted-soft: #777777;
+    --border: #333333;
+    --border-strong: #555555;
+    --accent-active: #ff5a78;
+    --accent-disabled: #5c2230;
+    --plus: #4cc26a;
+    --minus: #ff7a5c;
+    --danger: #ff7a5c;
     --notice: #2d2716;
     --notice-border: #6b5a24;
     color-scheme: dark;
@@ -62,19 +77,21 @@ body {
 }
 
 h1 {
-  font-size: 1.5rem;
+  font-size: 1.375rem;
+  font-weight: 600;
   margin: 0;
   cursor: pointer;
   word-break: break-word;
 }
 
 h2 {
-  font-size: 1.05rem;
+  font-size: 1.125rem;
+  font-weight: 600;
   margin: 0 0 12px;
 }
 
 a {
-  color: var(--accent);
+  color: var(--text);
 }
 
 .card {
@@ -118,7 +135,8 @@ label {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
 input,
@@ -133,18 +151,25 @@ input:not([type='checkbox']),
 select,
 textarea {
   width: 100%;
-  padding: 8px 10px;
+  min-height: 44px;
+  padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--bg);
+  background: var(--card);
   font-size: 16px;
+  font-weight: 400;
 }
 
 input:focus,
 select:focus,
 textarea:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: -1px;
+  outline: none;
+  border-color: var(--text);
+  box-shadow: 0 0 0 1px var(--text);
+}
+
+::placeholder {
+  color: var(--muted-soft);
 }
 
 button {
@@ -154,6 +179,11 @@ button {
   background: var(--card);
   cursor: pointer;
   white-space: nowrap;
+  font-weight: 500;
+}
+
+button:hover {
+  background: var(--surface-soft);
 }
 
 button:disabled {
@@ -161,17 +191,36 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* 主要操作だけが Rausch を使う */
 button.primary {
+  min-height: 48px;
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-text);
   font-weight: 600;
 }
 
+button.primary:hover,
+button.primary:active {
+  background: var(--accent-active);
+  border-color: var(--accent-active);
+}
+
+button.primary:disabled {
+  opacity: 1;
+  background: var(--accent-disabled);
+  border-color: var(--accent-disabled);
+}
+
+/* テキストボタン: 墨色、ホバーで下線 */
 button.ghost {
   border-color: transparent;
   background: transparent;
-  color: var(--accent);
+  color: var(--text);
+}
+
+button.ghost:hover {
+  text-decoration: underline;
 }
 
 button.small {
@@ -211,7 +260,7 @@ button.danger {
 }
 
 .chip {
-  background: var(--accent-soft);
+  background: var(--surface-strong);
   border-radius: 999px;
   padding: 2px 10px;
   font-size: 0.85rem;
@@ -232,10 +281,7 @@ button.danger {
   border-bottom: none;
 }
 
-/* 精算結果 */
-.settlement {
-  border-color: var(--accent);
-}
+/* 精算結果: 送金額が画面で最も大きな文字 (Airbnb の rating-display に相当) */
 
 .transfers {
   list-style: none;
@@ -251,9 +297,9 @@ button.danger {
   grid-template-columns: auto auto 1fr auto;
   align-items: center;
   gap: 8px;
-  background: var(--accent-soft);
-  border-radius: 8px;
-  padding: 10px 12px;
+  background: var(--surface-soft);
+  border-radius: 12px;
+  padding: 12px 16px;
   font-size: 1.05rem;
 }
 
@@ -268,6 +314,7 @@ button.danger {
 }
 
 .transfers .amount {
+  font-size: 1.375rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   text-align: right;
@@ -319,7 +366,7 @@ summary {
 
 /* 支払い一覧 */
 .expense.editing {
-  background: var(--accent-soft);
+  background: var(--surface-soft);
   border-radius: 8px;
   padding-inline: 8px;
 }
@@ -363,8 +410,8 @@ summary {
 }
 
 .segmented button.active {
-  background: var(--accent);
-  color: var(--accent-text);
+  background: var(--text);
+  color: var(--card);
 }
 
 .participants {
@@ -395,7 +442,7 @@ summary {
 }
 
 .participants .check input {
-  accent-color: var(--accent);
+  accent-color: var(--text);
   width: 18px;
   height: 18px;
 }
@@ -423,9 +470,9 @@ summary {
 }
 
 .chip.toggle.on {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-  color: var(--text);
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--card);
   font-weight: 600;
 }
 
@@ -440,7 +487,8 @@ summary {
 .memo {
   margin: 4px 0;
   padding: 6px 10px;
-  border-left: 3px solid var(--border);
+  border-left: 3px solid var(--border-strong);
+  color: var(--body);
   font-size: 0.9rem;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -449,12 +497,16 @@ summary {
 /* レシート・品目 */
 label.button {
   display: inline-block;
-  padding: 8px 14px;
-  border: 1px solid var(--accent);
+  padding: 10px 16px;
+  border: 1px solid var(--text);
   border-radius: 8px;
-  color: var(--accent);
+  color: var(--text);
   font-weight: 600;
   cursor: pointer;
+}
+
+label.button:hover {
+  background: var(--surface-soft);
 }
 
 label.button.disabled {
@@ -514,9 +566,9 @@ label.button.disabled {
 }
 
 /* ===== グループ画面レイアウト =====
- * ≥1024px: サイドバー | 支払いを追加 | 精算・一覧 (サイドバーは格納可)
- * 640–1023px: サイドバーは引き出し、追加 | 一覧 の2列
- * <640px: 一覧のみ。サイドバーは引き出し、追加は＋ボタンから全画面
+ * ≥1128px: サイドバー | 支払いを追加 | 精算・一覧 (サイドバーは格納可)
+ * 744–1127px: サイドバーは引き出し、追加 | 一覧 の2列
+ * <744px: 一覧のみ。サイドバーは引き出し、追加は＋ボタンから全画面
  */
 .layout {
   --sb: 240px;
@@ -579,16 +631,16 @@ label.button.disabled {
 }
 
 .sb-cats label:hover {
-  background: var(--bg);
+  background: var(--surface-soft);
 }
 
 .sb-cats label.on {
-  background: var(--accent-soft);
+  background: var(--surface-strong);
   font-weight: 600;
 }
 
 .sb-cats input {
-  accent-color: var(--accent);
+  accent-color: var(--text);
 }
 
 .sb-cats .grow {
@@ -612,7 +664,8 @@ button.sb-item {
 }
 
 button.sb-item:hover {
-  background: var(--bg);
+  background: var(--surface-soft);
+  text-decoration: none;
 }
 
 .sb-icon {
@@ -688,11 +741,11 @@ dialog.settings {
 }
 
 dialog.settings::backdrop {
-  background: rgb(0 0 0 / 0.4);
+  background: var(--scrim);
 }
 
 /* 引き出し式サイドバー (タブレット・スマホ) */
-@media (max-width: 1023px) {
+@media (max-width: 1127px) {
   .layout,
   .layout.collapsed {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -720,7 +773,7 @@ dialog.settings::backdrop {
     position: fixed;
     inset: 0;
     z-index: 20;
-    background: rgb(0 0 0 / 0.4);
+    background: var(--scrim);
   }
 
   /* 引き出し時は格納状態を無視して全表示 */
@@ -772,7 +825,7 @@ dialog.settings::backdrop {
 }
 
 /* スマホ: 一覧のみ + 全画面の入力画面 */
-@media (max-width: 639px) {
+@media (max-width: 743px) {
   .layout,
   .layout.collapsed {
     grid-template-columns: minmax(0, 1fr);
@@ -800,6 +853,8 @@ dialog.settings::backdrop {
     position: static;
     max-height: none;
     overflow: visible;
+    border: none;
+    padding-inline: 4px;
   }
 
   .sheet-close {
@@ -819,7 +874,7 @@ dialog.settings::backdrop {
     height: 56px;
     border-radius: 50%;
     font-size: 1.6rem;
-    box-shadow: 0 4px 12px rgb(0 0 0 / 0.25);
+    box-shadow: var(--shadow-float);
     z-index: 15;
   }
 
