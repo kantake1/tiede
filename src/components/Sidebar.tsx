@@ -10,7 +10,7 @@ type Props = {
   archived: CategoryRow[]
   /** アーカイブを除いた合計 */
   total: number
-  /** 選択中のカテゴリ。空なら全部 (アーカイブ除く) */
+  /** 選択中のイベント。空なら全部 (アーカイブ除く) */
   filter: string[]
   onFilter: (f: string[]) => void
   onAddCategory: () => void
@@ -64,8 +64,8 @@ export function Sidebar(p: Props) {
         {p.tripName}
       </h1>
 
-      <nav className="sb-label" aria-label="精算するカテゴリ">
-        <div className="sb-section">カテゴリ</div>
+      <nav className="sb-label" aria-label="精算するイベント">
+        <div className="sb-section">イベント</div>
         <ul className="sb-cats">
           <li>
             <label className={p.filter.length === 0 ? 'on' : ''}>
@@ -79,7 +79,7 @@ export function Sidebar(p: Props) {
           ))}
         </ul>
         <button className="ghost small with-icon" onClick={p.onAddCategory}>
-          <Plus size={16} /> カテゴリを追加
+          <Plus size={16} /> イベントを追加
         </button>
 
         {p.archived.length > 0 && (
@@ -106,9 +106,9 @@ export function Sidebar(p: Props) {
           <Link2 size={18} className="sb-icon" />
           <span className="sb-label">{p.copied ? 'コピーした' : 'URLを共有'}</span>
         </button>
-        <button className="ghost sb-item" onClick={p.onSettings} aria-label="メンバー・カテゴリ設定" title="メンバー・カテゴリ設定">
+        <button className="ghost sb-item" onClick={p.onSettings} aria-label="メンバー・イベント設定" title="メンバー・イベント設定">
           <Settings size={18} className="sb-icon" />
-          <span className="sb-label">メンバー・カテゴリ</span>
+          <span className="sb-label">メンバー・イベント</span>
         </button>
       </div>
     </aside>

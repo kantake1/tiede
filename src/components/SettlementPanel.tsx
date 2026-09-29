@@ -11,7 +11,7 @@ type Props = {
   nameOf: (id: string) => string
   /** 見出し右に置く操作 (精算済みにする など) */
   action?: ReactNode
-  /** テキスト共有用のグループ名と、選択中カテゴリの表示名 */
+  /** テキスト共有用のグループ名と、選択中イベントの表示名 */
   groupName: string
   label: string
   onShareText: (text: string) => void

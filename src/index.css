@@ -477,7 +477,7 @@ summary {
   font-variant-numeric: tabular-nums;
 }
 
-/* カテゴリ */
+/* イベント */
 .chip.toggle {
   border: 1px solid var(--border);
   background: transparent;

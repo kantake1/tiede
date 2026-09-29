@@ -154,12 +154,12 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
 
   async function onCategoryChange(v: string) {
     if (v !== NEW_CATEGORY) return setCategoryId(v)
-    const name = askName('新しいカテゴリ名 (例: 食費、3月の飲み会)', 50, { existing: categories.map((c) => c.name) })
+    const name = askName('新しいイベント名 (例: 沖縄旅行、3月の飲み会)', 50, { existing: categories.map((c) => c.name) })
     if (!name) return
     try {
       setCategoryId(await onCreateCategory(name))
     } catch (e) {
-      alert(`カテゴリの作成に失敗した: ${(e as Error).message}`)
+      alert(`イベントの作成に失敗した: ${(e as Error).message}`)
     }
   }
 
@@ -198,7 +198,7 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
 
   const allOn = targets.length === members.length
 
-  if (members.length === 0) return <p className="notice">支払いを記録するには、先に「メンバー・カテゴリ」からメンバーを追加する。</p>
+  if (members.length === 0) return <p className="notice">支払いを記録するには、先に「メンバー・イベント」からメンバーを追加する。</p>
 
   return (
     <form className="expense-form stack" onSubmit={submit}>
@@ -242,7 +242,7 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
           </label>
         </div>
         <label>
-          カテゴリ
+          イベント
           <select value={categoryId} onChange={(e) => onCategoryChange(e.target.value)}>
             <option value="">未分類</option>
             {categories.map((c) => (
@@ -250,7 +250,7 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
                 {c.name}
               </option>
             ))}
-            <option value={NEW_CATEGORY}>＋ 新しいカテゴリ…</option>
+            <option value={NEW_CATEGORY}>＋ 新しいイベント…</option>
           </select>
         </label>
 

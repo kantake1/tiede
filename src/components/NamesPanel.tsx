@@ -12,7 +12,7 @@ type Props = {
   onRemove: (id: string) => void
 }
 
-/** メンバー・カテゴリ共通の一覧 (追加・名前変更・削除) */
+/** メンバー・イベント共通の一覧 (追加・名前変更・削除) */
 export function NamesPanel({ title, entries, placeholder, isReferenced, onAdd, onRename, onRemove }: Props) {
   const [name, setName] = useState('')
   const [error, setError] = useState('')

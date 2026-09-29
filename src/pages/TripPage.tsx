@@ -50,7 +50,7 @@ export function TripPage({ tripId }: { tripId: string }) {
     setEditRev((r) => r + 1)
   }
   const [copied, setCopied] = useState(false)
-  // 精算・一覧に含めるカテゴリ。空なら全部。'' は未分類
+  // 精算・一覧に含めるイベント。空なら全部。'' は未分類
   const [filter, setFilter] = useState<string[]>([])
   // デスクトップでの格納状態 (端末に保存) / タブレット・スマホでの引き出し / スマホでの入力画面
   const [collapsed, setCollapsed] = useState(loadCollapsed)
@@ -157,7 +157,7 @@ export function TripPage({ tripId }: { tripId: string }) {
     return (id: string | undefined) => (id ? map.get(id) : undefined)
   }, [data])
 
-  // 削除済みカテゴリを指す支払いは未分類扱い
+  // 削除済みイベントを指す支払いは未分類扱い
   const catKey = (e: Expense) => (categoryOf(e.categoryId) ? e.categoryId! : '')
 
   const status = (node: React.ReactNode) => (
@@ -186,7 +186,7 @@ export function TripPage({ tripId }: { tripId: string }) {
     )
   if (data === null) return status(<p className="error">グループが見つからない。URLを確認する。</p>)
 
-  // 精算済みカテゴリは「すべて」から除く。個別に選べば閲覧できる
+  // 精算済みイベントは「すべて」から除く。個別に選べば閲覧できる
   const archivedIds = new Set(data.categories.filter((c) => c.archived).map((c) => c.id))
   const active = data.expenses.filter((e) => !archivedIds.has(catKey(e)))
   const visible = filter.length ? data.expenses.filter((e) => filter.includes(catKey(e))) : active
@@ -244,7 +244,7 @@ export function TripPage({ tripId }: { tripId: string }) {
   }
 
   async function addCategory() {
-    const name = askName('新しいカテゴリ名 (例: 食費、3月の飲み会)', 50, { existing: data!.categories.map((c) => c.name) })
+    const name = askName('新しいイベント名 (例: 沖縄旅行、3月の飲み会)', 50, { existing: data!.categories.map((c) => c.name) })
     if (name) await run(store!.addCategory(tripId, name))
   }
 
@@ -265,6 +265,17 @@ export function TripPage({ tripId }: { tripId: string }) {
         .map((r) => r.name)
         .join('・')
     : 'すべて'
+
+  // 複数のイベントを選んでいるときは、未精算のものをまとめて精算済みにできる (未分類・アーカイブ済みは除く)
+  const selectedActive = data.categories.filter((c) => filter.includes(c.id) && !c.archived)
+  const bulk = filter.length >= 2 && selectedActive.length > 0
+
+  function archiveMany() {
+    const names = selectedActive.map((c) => `「${c.name}」`).join('')
+    if (!confirm(`${names}をまとめて精算済みにしてアーカイブに移す？`)) return
+    for (const c of selectedActive) run(store!.setCategoryArchived(tripId, c.id, true))
+    setFilter(filter.filter((k) => !selectedActive.some((c) => c.id === k)))
+  }
 
   function archive(archived: boolean, id: string) {
     const name = data!.categories.find((c) => c.id === id)?.name
@@ -383,7 +394,7 @@ export function TripPage({ tripId }: { tripId: string }) {
             </div>
           ) : (
             <ExpenseForm
-              // 新規入力はサイドバーで1カテゴリだけ選んでいればそれを初期値にする (切り替えで作り直す)
+              // 新規入力はサイドバーで1イベントだけ選んでいればそれを初期値にする (切り替えで作り直す)
               key={editing ? `${editing.id}-${editRev}` : `new-${defaultCategoryId}`}
               members={data.members}
               categories={data.categories.filter((c) => !c.archived || c.id === editing?.categoryId)}
@@ -433,16 +444,22 @@ export function TripPage({ tripId }: { tripId: string }) {
           label={filterLabel}
           onShareText={shareText}
           action={
-            selected &&
-            (selected.archived ? (
-              <button className="ghost small with-icon" onClick={() => archive(false, selected.id)}>
-                <ArchiveRestore size={16} /> アーカイブから戻す
+            bulk ? (
+              <button className="small with-icon" onClick={archiveMany}>
+                <Archive size={16} /> まとめて精算
               </button>
             ) : (
-              <button className="small with-icon" onClick={() => archive(true, selected.id)}>
-                <Archive size={16} /> 精算済みにする
-              </button>
-            ))
+              selected &&
+              (selected.archived ? (
+                <button className="ghost small with-icon" onClick={() => archive(false, selected.id)}>
+                  <ArchiveRestore size={16} /> アーカイブから戻す
+                </button>
+              ) : (
+                <button className="small with-icon" onClick={() => archive(true, selected.id)}>
+                  <Archive size={16} /> 精算済みにする
+                </button>
+              ))
+            )
           }
         />
         <ExpenseList
@@ -480,7 +497,7 @@ export function TripPage({ tripId }: { tripId: string }) {
 
       <dialog ref={settingsRef} className="settings" onClick={(e) => e.target === e.currentTarget && settingsRef.current?.close()}>
         <div className="row">
-          <h2 className="grow">メンバー・カテゴリ</h2>
+          <h2 className="grow">メンバー・イベント</h2>
           <button className="ghost icon" onClick={() => settingsRef.current?.close()} aria-label="閉じる">
             <X size={20} />
           </button>
@@ -497,9 +514,9 @@ export function TripPage({ tripId }: { tripId: string }) {
           onRemove={(id) => run(store.removeMember(tripId, id))}
         />
         <NamesPanel
-          title="カテゴリ"
+          title="イベント"
           entries={data.categories}
-          placeholder="例: 食費、3月の飲み会"
+          placeholder="例: 沖縄旅行、3月の飲み会"
           isReferenced={(id) => data.expenses.some((e) => e.categoryId === id)}
           onAdd={(name) => run(store.addCategory(tripId, name))}
           onRename={(id, name) => run(store.renameCategory(tripId, id, name))}

@@ -15,7 +15,7 @@
   - **品目別**: レシートの品目ごとに対象者を指定。税や割引などの差額は各自の小計比で自動比例配分
   - ※ 1円未満の端数は立替人負担。20人までは部分集合DPによる厳密解、21人以上は貪欲法で送金回数を最小化
 - **レシート読み取り**: Firebase AI Logic (`gemini-3.5-flash-lite`) でレシート画像から店名・品目・合計金額を自動抽出 (画像はサーバーへ保存しません)
-- **カテゴリとアーカイブ**: グループ内に「宿泊」「食事」などのカテゴリを作成 (1支払い=1カテゴリ)。カテゴリごとの絞り込みや合算精算が可能。精算完了したカテゴリはアーカイブして合算対象から除外可能 (復元も可)
+- **イベントとアーカイブ**: グループ内に「宿泊」「食事」などのイベントを作成 (1支払い=1イベント)。イベントごとの絞り込みや合算精算が可能。精算完了したイベントはアーカイブして合算対象から除外可能 (復元も可)
 - **日付**: 支払いごとに支払日 (YYYY-MM-DD) を記録し、一覧を日付順にグルーピング
 - **メモ**: 各支払いに詳細な情報や備考を自由記述 (最大1000文字)
 - **削除の取り消し**: 誤削除防止の確認ダイアログを挟まず即時削除し、画面下の通知から同一IDのまま即座に復元可能
@@ -100,7 +100,7 @@ trips/{tripId}
 - `createdAt` (timestamp / number): 作成日時
 
 ### `categories/{categoryId}`
-- `name` (string): カテゴリ名 (最大50文字)
+- `name` (string): イベント名 (最大50文字)
 - `archived` (boolean, optional): アーカイブ済みフラグ
 - `createdAt` (timestamp / number): 作成日時
 
@@ -114,7 +114,7 @@ trips/{tripId}
   - `ratio`: 比率の重み (整数)
   - `amount`: 個別負担額 (円)
 - `items` (list, optional): 品目リスト (`[{ name: string, price: number, memberIds: string[] }]`)
-- `categoryId` (string, optional): 所属するカテゴリのID
+- `categoryId` (string, optional): 所属するイベントのID
 - `memo` (string, optional): メモ (最大1000文字)
 - `date` (string, optional): 支払日 (`YYYY-MM-DD` 形式)
 - `createdAt` (timestamp / number): 作成日時
