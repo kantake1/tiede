@@ -1,4 +1,4 @@
-import type { ExpenseInput, TripData } from '../types'
+import type { Expense, ExpenseInput, TripData } from '../types'
 
 export interface TripStore {
   readonly kind: 'firestore' | 'local'
@@ -15,4 +15,6 @@ export interface TripStore {
   addExpense(tripId: string, expense: ExpenseInput): Promise<void>
   updateExpense(tripId: string, expenseId: string, expense: ExpenseInput): Promise<void>
   deleteExpense(tripId: string, expenseId: string): Promise<void>
+  /** 削除の取り消し。同じ ID・作成日時で作り直す */
+  restoreExpense(tripId: string, expense: Expense): Promise<void>
 }

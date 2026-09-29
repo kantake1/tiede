@@ -1,5 +1,7 @@
 import { Camera, Plus, X } from 'lucide-react'
 import { useState } from 'react'
+import { dateOf, today } from '../lib/date'
+import { friendlyError } from '../lib/errors'
 import { parseNumber, yen } from '../lib/format'
 import { computeOwed } from '../lib/split'
 import type { Category, Expense, ExpenseInput, Item, Member, SplitMode } from '../types'
@@ -26,6 +28,7 @@ const MODES: { value: SplitMode; label: string }[] = [
 ]
 
 const NEW_CATEGORY = '__new__'
+const MAX_AMOUNT = 100_000_000
 
 export function ExpenseForm({ members, categories, initial, defaultCategoryId, onCreateCategory, readReceipt, onSubmit, onCancel }: Props) {
   const [title, setTitle] = useState(initial?.title ?? '')
@@ -34,6 +37,7 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
   const [mode, setMode] = useState<SplitMode>(initial?.mode ?? 'equal')
   const [categoryId, setCategoryId] = useState(initial ? (initial.categoryId ?? '') : defaultCategoryId)
   const [memo, setMemo] = useState(initial?.memo ?? '')
+  const [date, setDate] = useState(initial ? dateOf(initial) : today())
   const [included, setIncluded] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(members.map((m) => [m.id, initial ? (initial.shares[m.id] ?? 0) > 0 : true])),
   )
@@ -67,6 +71,8 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
   let error = ''
   if (!title.trim()) error = '内容を入力する'
   else if (!Number.isInteger(amount) || amount <= 0) error = '金額は1円以上の整数で入力する'
+  else if (amount > MAX_AMOUNT) error = '金額は1億円までにする'
+  else if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) error = '日付を入力する'
   else if (!memberIdSet.has(payerId)) error = '立て替えた人を選ぶ'
   else if (mode === 'items') {
     if (items.length === 0) error = '品目を1つ以上追加する'
@@ -137,7 +143,7 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
       if (!title.trim() && r.storeName) setTitle(r.storeName)
       setMode('items')
     } catch (e) {
-      setReadError(`読み取りに失敗した: ${(e as Error).message}`)
+      setReadError(`読み取りに失敗した: ${friendlyError(e)}`)
     } finally {
       setReading(false)
     }
@@ -168,6 +174,7 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
         items: mode === 'items' ? parsedItems : [],
         categoryId,
         memo: memo.trim(),
+        date,
       })
       if (!initial) {
         setTitle('')
@@ -184,6 +191,8 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
   }
 
   const allOn = targets.length === members.length
+
+  if (members.length === 0) return <p className="notice">支払いを記録するには、先に「メンバー・カテゴリ」からメンバーを追加する。</p>
 
   return (
     <form className="expense-form stack" onSubmit={submit}>
@@ -220,18 +229,22 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
           </select>
         </label>
         <label>
-          カテゴリ
-          <select value={categoryId} onChange={(e) => onCategoryChange(e.target.value)}>
-            <option value="">未分類</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-            <option value={NEW_CATEGORY}>＋ 新しいカテゴリ…</option>
-          </select>
+          日付
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
         </label>
       </div>
+      <label>
+        カテゴリ
+        <select value={categoryId} onChange={(e) => onCategoryChange(e.target.value)}>
+          <option value="">未分類</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+          <option value={NEW_CATEGORY}>＋ 新しいカテゴリ…</option>
+        </select>
+      </label>
 
       <div>
         <div className="label-row">

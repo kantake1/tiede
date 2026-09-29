@@ -45,10 +45,34 @@ async function toJpegBase64(file: File): Promise<string> {
   return canvas.toDataURL('image/jpeg', 0.85).split(',')[1]
 }
 
+const readAsBase64 = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const r = new FileReader()
+    r.onload = () => resolve(String(r.result).split(',')[1])
+    r.onerror = () => reject(r.error)
+    r.readAsDataURL(file)
+  })
+
+/** 縮小できない形式 (Chrome での iPhone の HEIC など) は元データのまま送る。Gemini は HEIC/HEIF に対応 */
+async function encode(file: File): Promise<{ mimeType: string; data: string }> {
+  try {
+    return { mimeType: 'image/jpeg', data: await toJpegBase64(file) }
+  } catch {
+    const type = file.type || (/\.hei[cf]$/i.test(file.name) ? 'image/heic' : '')
+    if (!/^image\/(heic|heif|jpeg|png|webp)$/.test(type)) throw new Error('この画像形式は読み取れない。JPEG か PNG の写真を選ぶ')
+    if (file.size > 15 * 1024 * 1024) throw new Error('画像が大きすぎる (15MB まで)')
+    return { mimeType: type, data: await readAsBase64(file) }
+  }
+}
+
 export async function readReceipt(file: File): Promise<ReceiptResult> {
-  const data = await toJpegBase64(file)
-  const res = await model.generateContent([PROMPT, { inlineData: { mimeType: 'image/jpeg', data } }])
-  const r = JSON.parse(res.response.text()) as ReceiptResult
+  const res = await model.generateContent([PROMPT, { inlineData: await encode(file) }])
+  let r: ReceiptResult
+  try {
+    r = JSON.parse(res.response.text()) as ReceiptResult
+  } catch {
+    throw new Error('レシートとして読み取れなかった。明るい場所で全体が写るように撮り直す')
+  }
   return {
     storeName: r.storeName ?? '',
     total: Math.round(r.total ?? 0),

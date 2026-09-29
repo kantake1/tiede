@@ -1113,3 +1113,99 @@ body.resizing .layout {
     animation: none;
   }
 }
+
+/* 支払い一覧の日付見出し */
+.list > li.date-head {
+  display: flex;
+  justify-content: space-between;
+  padding: 16px 0 6px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--body);
+}
+
+.list > li.date-head:first-child {
+  padding-top: 0;
+}
+
+.share-text {
+  margin-top: 12px;
+}
+
+/* 通知 (画面下部) */
+.toast-region {
+  position: fixed;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 40;
+  width: min(480px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 8px 10px 16px;
+  border-radius: 12px;
+  background: var(--text);
+  color: var(--card);
+  box-shadow: var(--shadow-float);
+  font-size: 0.9rem;
+  pointer-events: auto;
+  animation: toast-in 0.2s ease;
+}
+
+.toast.error {
+  background: var(--danger);
+  color: #ffffff;
+}
+
+.toast button {
+  border: none;
+  background: transparent;
+  color: inherit;
+  padding: 6px 8px;
+}
+
+.toast .toast-action {
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.toast button:hover {
+  background: rgb(255 255 255 / 0.12);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* スマホでは＋ボタンと重ならないよう上に */
+@media (max-width: 743px) {
+  .toast-region {
+    bottom: calc(88px + env(safe-area-inset-bottom));
+  }
+}
+
+/* 同期状態 (オフライン / 送信待ち) */
+.sync {
+  margin-left: 10px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: var(--surface-strong);
+  color: var(--body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sync.offline {
+  background: var(--notice);
+  border: 1px solid var(--notice-border);
+}

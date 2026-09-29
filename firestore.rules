@@ -42,7 +42,7 @@ service cloud.firestore {
 
       match /expenses/{expenseId} {
         function validExpense(d) {
-          return d.keys().hasOnly(['title', 'amount', 'payerId', 'mode', 'shares', 'items', 'categoryId', 'memo', 'createdAt'])
+          return d.keys().hasOnly(['title', 'amount', 'payerId', 'mode', 'shares', 'items', 'categoryId', 'memo', 'date', 'createdAt'])
             && validName(d.title, 100)
             && d.amount is int && d.amount > 0 && d.amount <= 10000000000
             && d.payerId is string
@@ -50,7 +50,8 @@ service cloud.firestore {
             && d.shares is map && d.shares.size() <= 100
             && (!('items' in d) || (d.items is list && d.items.size() <= 200))
             && (!('categoryId' in d) || (d.categoryId is string && d.categoryId.size() <= 64))
-            && (!('memo' in d) || (d.memo is string && d.memo.size() <= 1000));
+            && (!('memo' in d) || (d.memo is string && d.memo.size() <= 1000))
+            && (!('date' in d) || (d.date is string && d.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')));
         }
 
         allow read, delete: if true;

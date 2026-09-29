@@ -28,6 +28,8 @@ export type Expense = {
   items?: Item[]
   categoryId?: string
   memo?: string
+  /** 支払った日 (YYYY-MM-DD, 端末のローカル日付)。古いデータには無い */
+  date?: string
   createdAt: number
 }
 
@@ -52,4 +54,6 @@ export type TripData = {
   members: Member[]
   categories: Category[]
   expenses: Expense[]
+  /** サーバーへ未送信の変更がある (オフライン時など) */
+  pending?: boolean
 }

@@ -1,7 +1,8 @@
-import { ArrowRight, ChevronRight } from 'lucide-react'
+import { ArrowRight, ChevronRight, Share2 } from 'lucide-react'
 import { useMemo, type ReactNode } from 'react'
 import { yen } from '../lib/format'
 import { computeBalances, settle } from '../lib/settle'
+import { settlementText } from '../lib/shareText'
 import type { Expense, Member } from '../types'
 
 type Props = {
@@ -10,9 +11,13 @@ type Props = {
   nameOf: (id: string) => string
   /** 見出し右に置く操作 (精算済みにする など) */
   action?: ReactNode
+  /** テキスト共有用のグループ名と、選択中カテゴリの表示名 */
+  groupName: string
+  label: string
+  onShareText: (text: string) => void
 }
 
-export function SettlementPanel({ members, expenses, nameOf, action }: Props) {
+export function SettlementPanel({ members, expenses, nameOf, action, groupName, label, onShareText }: Props) {
   const { balances, transfers, total } = useMemo(() => {
     const balances = computeBalances(members, expenses)
     return { balances, transfers: settle(balances), total: expenses.reduce((s, e) => s + e.amount, 0) }
@@ -39,6 +44,15 @@ export function SettlementPanel({ members, expenses, nameOf, action }: Props) {
             </li>
           ))}
         </ul>
+      )}
+
+      {expenses.length > 0 && (
+        <button
+          className="small with-icon share-text"
+          onClick={() => onShareText(settlementText({ groupName, label, transfers, total, nameOf, url: location.href }))}
+        >
+          <Share2 size={16} /> 精算結果をテキストで共有
+        </button>
       )}
 
       {expenses.length > 0 && (

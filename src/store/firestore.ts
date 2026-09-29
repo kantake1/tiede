@@ -1,19 +1,21 @@
 import { initializeApp } from 'firebase/app'
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check'
 import {
-  addDoc,
   collection,
   deleteDoc,
   doc,
-  getFirestore,
+  initializeFirestore,
   onSnapshot,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   serverTimestamp,
   setDoc,
+  Timestamp,
   updateDoc,
   writeBatch,
   type DocumentData,
-  type Timestamp,
 } from 'firebase/firestore'
+import { WRITE_ERROR_EVENT } from '../lib/errors'
 import type { Category, Expense, Member, Trip } from '../types'
 import type { TripStore } from './types'
 
@@ -35,7 +37,9 @@ if (import.meta.env.VITE_RECAPTCHA_SITE_KEY) {
   })
 }
 
-const db = getFirestore(app)
+// 旅行先の圏外・弱電波でも使えるよう、データを端末 (IndexedDB) に保持する。
+// 書き込みは端末に即反映され、電波が戻るとサーバーへ送られる。複数タブでも共有する
+const db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) })
 
 const trips = () => collection(db, 'trips')
 const members = (tripId: string) => collection(db, 'trips', tripId, 'members')
@@ -45,8 +49,39 @@ const expenses = (tripId: string) => collection(db, 'trips', tripId, 'expenses')
 // 書き込み直後のローカルスナップショットでは serverTimestamp が null になるため現在時刻で補う
 const millis = (v: unknown) => (v as Timestamp | null)?.toMillis?.() ?? Date.now()
 
+/**
+ * Firestore の書き込み Promise はサーバーの受領まで解決しないため、オフラインでは永久に待つ。
+ * 端末への反映は即時なので、一定時間で待つのをやめて先へ進め、後から失敗したら通知する。
+ */
+const WAIT_MS = 2500
+function write(p: Promise<unknown>): Promise<void> {
+  let waiting = true
+  return new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      waiting = false
+      resolve()
+    }, WAIT_MS)
+    p.then(
+      () => {
+        clearTimeout(timer)
+        resolve()
+      },
+      (e: Error) => {
+        clearTimeout(timer)
+        if (waiting) reject(e)
+        else window.dispatchEvent(new CustomEvent(WRITE_ERROR_EVENT, { detail: e }))
+      },
+    )
+  })
+}
+
 const toMember = (id: string, d: DocumentData): Member => ({ id, name: d.name, createdAt: millis(d.createdAt) })
-const toCategory = (id: string, d: DocumentData): Category => ({ id, name: d.name, archived: d.archived === true, createdAt: millis(d.createdAt) })
+const toCategory = (id: string, d: DocumentData): Category => ({
+  id,
+  name: d.name,
+  archived: d.archived === true,
+  createdAt: millis(d.createdAt),
+})
 const toExpense = (id: string, d: DocumentData): Expense => ({
   id,
   title: d.title,
@@ -57,6 +92,7 @@ const toExpense = (id: string, d: DocumentData): Expense => ({
   items: d.items,
   categoryId: d.categoryId,
   memo: d.memo,
+  date: d.date,
   createdAt: millis(d.createdAt),
 })
 
@@ -67,8 +103,10 @@ export const firestoreStore: TripStore = {
     const tripRef = doc(trips())
     const batch = writeBatch(db)
     batch.set(tripRef, { name, createdAt: serverTimestamp() })
-    for (const m of memberNames) batch.set(doc(members(tripRef.id)), { name: m, createdAt: serverTimestamp() })
-    await batch.commit()
+    // 同じバッチの serverTimestamp は全員同じ値になり並びが崩れるため、入力順に1msずつずらした端末時刻を使う
+    const now = Date.now()
+    memberNames.forEach((m, i) => batch.set(doc(members(tripRef.id)), { name: m, createdAt: Timestamp.fromMillis(now + i) }))
+    await write(batch.commit())
     return tripRef.id
   },
 
@@ -77,6 +115,7 @@ export const firestoreStore: TripStore = {
     let ms: Member[] | undefined
     let cs: Category[] | undefined
     let es: Expense[] | undefined
+    const pending = [false, false, false, false]
     const emit = () => {
       if (trip === undefined || ms === undefined || cs === undefined || es === undefined) return
       if (trip === null) return onData(null)
@@ -85,13 +124,19 @@ export const firestoreStore: TripStore = {
         members: [...ms].sort((a, b) => a.createdAt - b.createdAt),
         categories: [...cs].sort((a, b) => a.createdAt - b.createdAt),
         expenses: [...es].sort((a, b) => a.createdAt - b.createdAt),
+        pending: pending.some(Boolean),
       })
     }
     const err = (e: Error) => onError(e)
+    const opts = { includeMetadataChanges: true }
     const unsubs = [
       onSnapshot(
         doc(trips(), tripId),
+        opts,
         (s) => {
+          pending[0] = s.metadata.hasPendingWrites
+          // 端末に無く、まだサーバーからも取れていない間は「無い」と判定しない
+          if (!s.exists() && s.metadata.fromCache) return
           trip = s.exists() ? { id: s.id, name: s.data().name, createdAt: millis(s.data().createdAt) } : null
           emit()
         },
@@ -99,7 +144,9 @@ export const firestoreStore: TripStore = {
       ),
       onSnapshot(
         members(tripId),
+        opts,
         (s) => {
+          pending[1] = s.metadata.hasPendingWrites
           ms = s.docs.map((d) => toMember(d.id, d.data()))
           emit()
         },
@@ -107,7 +154,9 @@ export const firestoreStore: TripStore = {
       ),
       onSnapshot(
         categories(tripId),
+        opts,
         (s) => {
+          pending[2] = s.metadata.hasPendingWrites
           cs = s.docs.map((d) => toCategory(d.id, d.data()))
           emit()
         },
@@ -115,7 +164,9 @@ export const firestoreStore: TripStore = {
       ),
       onSnapshot(
         expenses(tripId),
+        opts,
         (s) => {
+          pending[3] = s.metadata.hasPendingWrites
           es = s.docs.map((d) => toExpense(d.id, d.data()))
           emit()
         },
@@ -125,49 +176,35 @@ export const firestoreStore: TripStore = {
     return () => unsubs.forEach((u) => u())
   },
 
-  async renameTrip(tripId, name) {
-    await updateDoc(doc(trips(), tripId), { name })
-  },
+  renameTrip: (tripId, name) => write(updateDoc(doc(trips(), tripId), { name })),
 
-  async addMember(tripId, name) {
-    await addDoc(members(tripId), { name, createdAt: serverTimestamp() })
-  },
+  addMember: (tripId, name) => write(setDoc(doc(members(tripId)), { name, createdAt: serverTimestamp() })),
 
-  async renameMember(tripId, memberId, name) {
-    await updateDoc(doc(members(tripId), memberId), { name })
-  },
+  renameMember: (tripId, memberId, name) => write(updateDoc(doc(members(tripId), memberId), { name })),
 
-  async removeMember(tripId, memberId) {
-    await deleteDoc(doc(members(tripId), memberId))
-  },
+  removeMember: (tripId, memberId) => write(deleteDoc(doc(members(tripId), memberId))),
 
   async addCategory(tripId, name) {
     const ref = doc(categories(tripId))
-    await setDoc(ref, { name, createdAt: serverTimestamp() })
+    await write(setDoc(ref, { name, createdAt: serverTimestamp() }))
     return ref.id
   },
 
-  async renameCategory(tripId, categoryId, name) {
-    await updateDoc(doc(categories(tripId), categoryId), { name })
-  },
+  renameCategory: (tripId, categoryId, name) => write(updateDoc(doc(categories(tripId), categoryId), { name })),
 
-  async removeCategory(tripId, categoryId) {
-    await deleteDoc(doc(categories(tripId), categoryId))
-  },
+  removeCategory: (tripId, categoryId) => write(deleteDoc(doc(categories(tripId), categoryId))),
 
-  async setCategoryArchived(tripId, categoryId, archived) {
-    await updateDoc(doc(categories(tripId), categoryId), { archived })
-  },
+  setCategoryArchived: (tripId, categoryId, archived) => write(updateDoc(doc(categories(tripId), categoryId), { archived })),
 
-  async addExpense(tripId, e) {
-    await setDoc(doc(expenses(tripId)), { ...e, createdAt: serverTimestamp() })
-  },
+  addExpense: (tripId, e) => write(setDoc(doc(expenses(tripId)), { ...e, createdAt: serverTimestamp() })),
 
-  async updateExpense(tripId, expenseId, e) {
-    await updateDoc(doc(expenses(tripId), expenseId), { ...e })
-  },
+  updateExpense: (tripId, expenseId, e) => write(updateDoc(doc(expenses(tripId), expenseId), { ...e })),
 
-  async deleteExpense(tripId, expenseId) {
-    await deleteDoc(doc(expenses(tripId), expenseId))
+  deleteExpense: (tripId, expenseId) => write(deleteDoc(doc(expenses(tripId), expenseId))),
+
+  restoreExpense(tripId, { id, createdAt, ...rest }) {
+    // undefined のフィールドは Firestore が受け付けないため除く
+    const data = Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== undefined))
+    return write(setDoc(doc(expenses(tripId), id), { ...data, createdAt: Timestamp.fromMillis(createdAt) }))
   },
 }

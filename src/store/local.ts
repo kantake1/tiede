@@ -101,4 +101,8 @@ export const localStore: TripStore = {
   async deleteExpense(tripId, expenseId) {
     mutate(tripId, (t) => (t.expenses = t.expenses.filter((x) => x.id !== expenseId)))
   },
+
+  async restoreExpense(tripId, expense) {
+    mutate(tripId, (t) => (t.expenses = [...t.expenses.filter((x) => x.id !== expense.id), expense]))
+  },
 }

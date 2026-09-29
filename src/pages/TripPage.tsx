@@ -1,11 +1,13 @@
 import { Archive, ArchiveRestore, Check, Link2, Menu, Plus, X } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ExpenseForm } from '../components/ExpenseForm'
 import { ExpenseList } from '../components/ExpenseList'
 import { NamesPanel } from '../components/NamesPanel'
 import { ResizeHandle } from '../components/ResizeHandle'
 import { SettlementPanel } from '../components/SettlementPanel'
 import { Sidebar } from '../components/Sidebar'
+import { Toast, type ToastMessage } from '../components/Toast'
+import { friendlyError, WRITE_ERROR_EVENT } from '../lib/errors'
 import { touchRecent } from '../lib/recent'
 import { getStore, isFirebaseConfigured, type TripStore } from '../store'
 import type { Expense, TripData } from '../types'
@@ -30,9 +32,7 @@ const loadWidths = (): Widths => {
   }
 }
 
-const readReceipt = isFirebaseConfigured
-  ? (file: File) => import('../lib/receipt').then((m) => m.readReceipt(file))
-  : undefined
+const readReceipt = isFirebaseConfigured ? (file: File) => import('../lib/receipt').then((m) => m.readReceipt(file)) : undefined
 
 export function TripPage({ tripId }: { tripId: string }) {
   const [store, setStore] = useState<TripStore>()
@@ -48,6 +48,36 @@ export function TripPage({ tripId }: { tripId: string }) {
   const [sheet, setSheet] = useState(false)
   const settingsRef = useRef<HTMLDialogElement>(null)
   const [widths, setWidths] = useState<Widths>(loadWidths)
+  const [toast, setToast] = useState<ToastMessage | null>(null)
+  const [online, setOnline] = useState(() => navigator.onLine)
+  const [slow, setSlow] = useState(false)
+
+  const notify = useCallback(
+    (text: string, opts: Omit<ToastMessage, 'id' | 'text'> = {}) => setToast({ id: Date.now(), text, ...opts }),
+    [],
+  )
+  const closeToast = useCallback(() => setToast(null), [])
+
+  // 通信状態と、待つのをやめた書き込みの後からの失敗
+  useEffect(() => {
+    const on = () => setOnline(true)
+    const off = () => setOnline(false)
+    const failed = (e: Event) => notify(`保存できなかった変更がある: ${friendlyError((e as CustomEvent).detail)}`, { tone: 'error' })
+    window.addEventListener('online', on)
+    window.addEventListener('offline', off)
+    window.addEventListener(WRITE_ERROR_EVENT, failed)
+    return () => {
+      window.removeEventListener('online', on)
+      window.removeEventListener('offline', off)
+      window.removeEventListener(WRITE_ERROR_EVENT, failed)
+    }
+  }, [notify])
+
+  // 読み込みが長引いたら理由を示す (圏外で初めて開いたグループなど)
+  useEffect(() => {
+    const t = setTimeout(() => setSlow(true), 8000)
+    return () => clearTimeout(t)
+  }, [tripId])
 
   useEffect(() => {
     try {
@@ -112,7 +142,19 @@ export function TripPage({ tripId }: { tripId: string }) {
     </div>
   )
   if (error) return status(<p className="error">読み込みに失敗した: {error}</p>)
-  if (data === undefined || !store) return status(<p className="muted">読み込み中…</p>)
+  if (data === undefined || !store)
+    return status(
+      <>
+        <p className="muted">読み込み中…</p>
+        {slow && (
+          <p className="notice">
+            {online
+              ? '読み込みに時間がかかっている。電波の良い場所で待つか、再読み込みする。'
+              : 'オフラインのため読み込めない。この端末で一度も開いたことのないグループは、電波が戻るまで表示できない。'}
+          </p>
+        )}
+      </>,
+    )
   if (data === null) return status(<p className="error">グループが見つからない。URLを確認する。</p>)
 
   // 精算済みカテゴリは「すべて」から除く。個別に選べば閲覧できる
@@ -120,7 +162,22 @@ export function TripPage({ tripId }: { tripId: string }) {
   const active = data.expenses.filter((e) => !archivedIds.has(catKey(e)))
   const visible = filter.length ? data.expenses.filter((e) => filter.includes(catKey(e))) : active
 
-  const run = (p: Promise<unknown>) => p.catch((e: Error) => alert(`保存に失敗した: ${e.message}`))
+  const run = (p: Promise<unknown>) => p.catch((e) => notify(`保存に失敗した: ${friendlyError(e)}`, { tone: 'error' }))
+
+  async function shareText(text: string) {
+    try {
+      if (navigator.share) return await navigator.share({ text })
+      await navigator.clipboard.writeText(text)
+      notify('精算結果をコピーした。LINE などに貼り付けられる')
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') notify('共有できなかった', { tone: 'error' })
+    }
+  }
+
+  // 編集中に他の人が削除した場合はフォームの代わりに知らせる
+  const editingGone = !!editing && !data.expenses.some((e) => e.id === editing.id)
+
+  const syncLabel = !online ? 'オフライン' : data.pending ? '送信待ち' : ''
 
   async function share() {
     const url = location.href
@@ -169,7 +226,10 @@ export function TripPage({ tripId }: { tripId: string }) {
   const selected = filter.length === 1 ? data.categories.find((c) => c.id === filter[0]) : undefined
   const defaultCategoryId = selected && !selected.archived ? selected.id : ''
   const filterLabel = filter.length
-    ? [...rows, ...archivedRows].filter((r) => filter.includes(r.key)).map((r) => r.name).join('・')
+    ? [...rows, ...archivedRows]
+        .filter((r) => filter.includes(r.key))
+        .map((r) => r.name)
+        .join('・')
     : 'すべて'
 
   function archive(archived: boolean, id: string) {
@@ -185,7 +245,10 @@ export function TripPage({ tripId }: { tripId: string }) {
   } as React.CSSProperties
 
   return (
-    <div className={`layout ${collapsed ? 'collapsed' : ''} ${drawer ? 'drawer-open' : ''} ${sheet ? 'sheet-open' : ''}`} style={layoutStyle}>
+    <div
+      className={`layout ${collapsed ? 'collapsed' : ''} ${drawer ? 'drawer-open' : ''} ${sheet ? 'sheet-open' : ''}`}
+      style={layoutStyle}
+    >
       {/* デスクトップの上部見出し。サイドバーの状態に関わらず表示 */}
       <header className="apphead">
         <a href="#/" className="logo">
@@ -197,6 +260,7 @@ export function TripPage({ tripId }: { tripId: string }) {
         <h1 className="apphead-name" onClick={rename} title="クリックして名前を変更">
           {data.trip.name}
         </h1>
+        {syncLabel && <span className={`sync ${online ? '' : 'offline'}`}>{syncLabel}</span>}
       </header>
       <Sidebar
         tripName={data.trip.name}
@@ -223,7 +287,10 @@ export function TripPage({ tripId }: { tripId: string }) {
         </button>
         <div className="grow topbar-title">
           <div className="topbar-name">{data.trip.name}</div>
-          <div className="muted small">{filterLabel}</div>
+          <div className="muted small">
+            {filterLabel}
+            {syncLabel && <span className={`sync ${online ? '' : 'offline'}`}>{syncLabel}</span>}
+          </div>
         </div>
         <button className="ghost icon" onClick={share} aria-label="URLを共有">
           {copied ? <Check size={20} /> : <Link2 size={20} />}
@@ -259,29 +326,45 @@ export function TripPage({ tripId }: { tripId: string }) {
               <X size={20} />
             </button>
           </div>
-          <ExpenseForm
-            // 新規入力はサイドバーで1カテゴリだけ選んでいればそれを初期値にする (切り替えで作り直す)
-            key={editing?.id ?? `new-${defaultCategoryId}`}
-            members={data.members}
-            categories={data.categories.filter((c) => !c.archived || c.id === editing?.categoryId)}
-            initial={editing}
-            defaultCategoryId={defaultCategoryId}
-            onCreateCategory={(name) => store.addCategory(tripId, name)}
-            readReceipt={readReceipt}
-            onSubmit={async (input) => {
-              await run(editing ? store.updateExpense(tripId, editing.id, input) : store.addExpense(tripId, input))
-              setEditing(null)
-              setSheet(false)
-            }}
-            onCancel={
-              editing
-                ? () => {
-                    setEditing(null)
-                    setSheet(false)
-                  }
-                : undefined
-            }
-          />
+          {editingGone ? (
+            <div className="stack">
+              <p className="notice">編集中の支払いは他の人が削除した。</p>
+              <button
+                onClick={() => {
+                  setEditing(null)
+                  setSheet(false)
+                }}
+              >
+                閉じる
+              </button>
+            </div>
+          ) : (
+            <ExpenseForm
+              // 新規入力はサイドバーで1カテゴリだけ選んでいればそれを初期値にする (切り替えで作り直す)
+              key={editing?.id ?? `new-${defaultCategoryId}`}
+              members={data.members}
+              categories={data.categories.filter((c) => !c.archived || c.id === editing?.categoryId)}
+              initial={editing}
+              defaultCategoryId={defaultCategoryId}
+              onCreateCategory={(name) => store.addCategory(tripId, name)}
+              readReceipt={readReceipt}
+              onSubmit={async (input) => {
+                // 端末には即反映されるので、サーバーの受領を待たずに閉じる (失敗は通知で知らせる)
+                run(editing ? store.updateExpense(tripId, editing.id, input) : store.addExpense(tripId, input))
+                if (!editing) notify(`「${input.title}」を追加した`)
+                setEditing(null)
+                setSheet(false)
+              }}
+              onCancel={
+                editing
+                  ? () => {
+                      setEditing(null)
+                      setSheet(false)
+                    }
+                  : undefined
+              }
+            />
+          )}
         </div>
       </section>
 
@@ -290,6 +373,9 @@ export function TripPage({ tripId }: { tripId: string }) {
           members={data.members}
           expenses={visible}
           nameOf={nameOf}
+          groupName={data.trip.name}
+          label={filterLabel}
+          onShareText={shareText}
           action={
             selected &&
             (selected.archived ? (
@@ -306,6 +392,7 @@ export function TripPage({ tripId }: { tripId: string }) {
         <ExpenseList
           expenses={visible}
           nameOf={nameOf}
+          memberIds={data.members.map((m) => m.id)}
           categoryOf={categoryOf}
           editingId={editing?.id}
           onEdit={(e) => {
@@ -314,8 +401,10 @@ export function TripPage({ tripId }: { tripId: string }) {
             document.querySelector('.col-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
           }}
           onDelete={(e) => {
-            if (confirm(`「${e.title}」を削除する？`)) run(store.deleteExpense(tripId, e.id))
+            // 確認ダイアログの代わりに、削除後しばらく「元に戻す」を出す
             if (editing?.id === e.id) setEditing(null)
+            run(store.deleteExpense(tripId, e.id))
+            notify(`「${e.title}」を削除した`, { action: { label: '元に戻す', run: () => run(store.restoreExpense(tripId, e)) } })
           }}
         />
       </section>
@@ -323,6 +412,8 @@ export function TripPage({ tripId }: { tripId: string }) {
       <button className="fab primary" onClick={() => setSheet(true)} aria-label="支払いを追加">
         <Plus size={28} />
       </button>
+
+      <Toast toast={toast} onClose={closeToast} />
 
       <dialog ref={settingsRef} className="settings" onClick={(e) => e.target === e.currentTarget && settingsRef.current?.close()}>
         <div className="row">
