@@ -232,14 +232,6 @@ button.danger {
   border-bottom: none;
 }
 
-.trip-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 8px;
-}
-
 /* 精算結果 */
 .settlement {
   border-color: var(--accent);
@@ -423,10 +415,6 @@ summary {
 }
 
 /* カテゴリ */
-.filter {
-  margin-top: 12px;
-}
-
 .chip.toggle {
   border: 1px solid var(--border);
   background: transparent;
@@ -523,4 +511,319 @@ label.button.disabled {
 
 .participants li:has(> span:first-child) .owed {
   grid-column: 2;
+}
+
+/* ===== グループ画面レイアウト =====
+ * ≥1024px: サイドバー | 支払いを追加 | 精算・一覧 (サイドバーは格納可)
+ * 640–1023px: サイドバーは引き出し、追加 | 一覧 の2列
+ * <640px: 一覧のみ。サイドバーは引き出し、追加は＋ボタンから全画面
+ */
+.layout {
+  --sb: 240px;
+  display: grid;
+  grid-template-columns: var(--sb) minmax(340px, 440px) minmax(0, 1fr);
+  grid-template-areas: 'side form list';
+  min-height: 100vh;
+}
+
+.layout.collapsed {
+  --sb: 56px;
+}
+
+.sidebar {
+  grid-area: side;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 12px;
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sb-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sb-title {
+  font-size: 1.15rem;
+  margin: 0;
+}
+
+.sb-section {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.sb-cats {
+  list-style: none;
+  margin: 0 0 4px;
+  padding: 0;
+}
+
+.sb-cats label {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.sb-cats label:hover {
+  background: var(--bg);
+}
+
+.sb-cats label.on {
+  background: var(--accent-soft);
+  font-weight: 600;
+}
+
+.sb-cats input {
+  accent-color: var(--accent);
+}
+
+.sb-cats .grow {
+  overflow-wrap: anywhere;
+}
+
+.sb-foot {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+button.sb-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  text-align: left;
+  padding: 8px;
+}
+
+button.sb-item:hover {
+  background: var(--bg);
+}
+
+.sb-icon {
+  width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+button.icon {
+  padding: 4px 10px;
+  font-size: 1.2rem;
+  line-height: 1;
+  color: var(--text);
+}
+
+.sb-close,
+.sheet-close,
+.topbar,
+.fab,
+.backdrop {
+  display: none;
+}
+
+.layout.collapsed .sb-label,
+.layout.collapsed .sb-head {
+  display: none;
+}
+
+.layout.collapsed .sidebar {
+  padding-inline: 8px;
+}
+
+.col-form {
+  grid-area: form;
+  padding: 0 16px;
+  border-right: 1px solid var(--border);
+}
+
+.col-form .card > .row:first-child {
+  margin-bottom: 12px;
+}
+
+.col-form .card > .row:first-child h2 {
+  margin: 0;
+}
+
+.col-form > .card {
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+}
+
+.col-list {
+  grid-area: list;
+  padding: 0 16px 48px;
+  min-width: 0;
+}
+
+.col-list > .card:first-child,
+.col-form > :first-child {
+  margin-top: 16px;
+}
+
+dialog.settings {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+  padding: 16px;
+}
+
+dialog.settings::backdrop {
+  background: rgb(0 0 0 / 0.4);
+}
+
+/* 引き出し式サイドバー (タブレット・スマホ) */
+@media (max-width: 1023px) {
+  .layout,
+  .layout.collapsed {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      'top top'
+      'form list';
+    grid-template-rows: auto 1fr;
+  }
+
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: min(280px, 85vw);
+    z-index: 30;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+  }
+
+  .layout.drawer-open .sidebar {
+    transform: none;
+  }
+
+  .layout.drawer-open .backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    background: rgb(0 0 0 / 0.4);
+  }
+
+  /* 引き出し時は格納状態を無視して全表示 */
+  .layout.collapsed .sb-label,
+  .layout.collapsed .sb-head {
+    display: revert;
+  }
+
+  .layout.collapsed .sb-head {
+    display: flex;
+  }
+
+  .sb-close {
+    display: inline-block;
+  }
+
+  .sb-collapse {
+    display: none;
+  }
+
+  .topbar {
+    grid-area: top;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    padding: 8px 8px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .topbar-title {
+    min-width: 0;
+  }
+
+  .topbar-name {
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .col-form > .card {
+    top: 72px;
+    max-height: calc(100vh - 88px);
+  }
+}
+
+/* スマホ: 一覧のみ + 全画面の入力画面 */
+@media (max-width: 639px) {
+  .layout,
+  .layout.collapsed {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'top'
+      'list';
+  }
+
+  .col-form {
+    display: none;
+    border: none;
+  }
+
+  .layout.sheet-open .col-form {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 25;
+    overflow-y: auto;
+    background: var(--bg);
+    padding: 0 12px 24px;
+  }
+
+  .layout.sheet-open .col-form > .card {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .sheet-close {
+    display: inline-block;
+  }
+
+  .col-list {
+    padding: 0 12px 96px;
+  }
+
+  .fab {
+    display: block;
+    position: fixed;
+    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    font-size: 1.6rem;
+    box-shadow: 0 4px 12px rgb(0 0 0 / 0.25);
+    z-index: 15;
+  }
+
+  .layout.sheet-open .fab {
+    display: none;
+  }
 }

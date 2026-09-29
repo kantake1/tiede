@@ -15,6 +15,9 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onChange)
   }, [])
 
+  // グループ画面はサイドバー付きの全幅レイアウト
+  if (route.tripId) return <TripPage key={route.tripId} tripId={route.tripId} />
+
   return (
     <div className="container">
       <header className="app-header">
@@ -22,7 +25,7 @@ export default function App() {
           旅費精算
         </a>
       </header>
-      {route.tripId ? <TripPage key={route.tripId} tripId={route.tripId} /> : <Home />}
+      <Home />
     </div>
   )
 }

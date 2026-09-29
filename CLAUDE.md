@@ -21,7 +21,7 @@
 - `src/lib/split.ts` 1件の支払いの各自負担額 (整数円、合計は必ず支払額と一致)
 - `src/lib/settle.ts` 残高計算と最小送金の算出。テストは `settle.test.ts`
 - `src/store/` データ層。`VITE_FIREBASE_PROJECT_ID` があれば Firestore、無ければ localStorage のローカルモード
-- `src/pages/`, `src/components/` UI
+- `src/pages/`, `src/components/` UI。グループ画面は サイドバー(カテゴリ, 格納可) | 支払いを追加 | 精算・一覧 の3列。1024px未満はサイドバーを引き出し式、640px未満は一覧のみで追加は＋ボタンから全画面 (`src/index.css` 末尾)
 - `firestore.rules` アクセス制御 (trips の list 禁止、フィールド検証)
 
 ## コマンド
