@@ -57,8 +57,9 @@
 
 ## ロゴ
 
-- 名前「おあいこ」= お互いさま・貸し借りなし。マークは Rausch の角丸四角 (角丸 14/64) に白い線の2つの輪 (半径12・線幅5、中心間隔14、viewBox 64) が重なる形。
-- 実体: `public/favicon.svg`、PWA アイコン (`public/icon-*.png`, `apple-touch-icon.png`。maskable は輪を78%に縮めて安全領域に収める)、画面内は `src/components/Logo.tsx` (マーク22px + 名前、太字)。
+- 名前「おあいこ」= お互いさま・貸し借りなし。マークは丸みの強い Rausch の角丸四角 (角丸 20/64) に、寄り添う2つの丸い「おもち」(白と淡いピンク #ffe4ea、半径13) が並ぶ形。それぞれ点の目・小さな笑顔・頬の赤み (#ffb3c1)。手前の白いおもちの縁を Rausch で抜いて重なりを表す。
+- 元データは `public/favicon.svg` (viewBox 64)。PWA アイコン (`public/icon-*.png`、`apple-touch-icon.png`) はこの SVG をブラウザで描画して書き出す。maskable は背景を全面にし、絵柄を80%に縮めて安全領域に収める。
+- 画面内は `src/components/Logo.tsx` (favicon.svg を24pxで表示 + 名前、太字)。
 
 ## アイコン
 

@@ -1294,7 +1294,6 @@ body.resizing .layout {
   letter-spacing: 0.02em;
 }
 
-.brand svg {
+.brand img {
   flex-shrink: 0;
-  border-radius: 5px;
 }

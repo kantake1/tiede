@@ -1,6 +1,6 @@
 // tiede の Service Worker。画面 (HTML/JS/CSS/画像) を端末に保存し、圏外でも起動できるようにする。
 // データ (Firestore) は Firebase SDK が IndexedDB に保持するので、ここでは扱わない。
-const CACHE = 'oaiko-v2'
+const CACHE = 'oaiko-v3'
 
 // 初回訪問ではページの読み込みが SW の起動より先に終わり、JS/CSS が保存されない。
 // ページから読み込み済みファイルの一覧を受け取って保存し、次回から圏外でも起動できるようにする
