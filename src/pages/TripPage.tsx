@@ -82,6 +82,15 @@ export function TripPage({ tripId }: { tripId: string }) {
     }
   }, [notify])
 
+  // 送信待ちの変更があるうちにタブを閉じようとしたら確認する (端末には残るが、次に開くまで他の人に届かない)
+  const pending = !!data?.pending
+  useEffect(() => {
+    if (!pending) return
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault()
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [pending])
+
   // 読み込みが長引いたら理由を示す (圏外で初めて開いたグループなど)
   useEffect(() => {
     const t = setTimeout(() => setSlow(true), 8000)
