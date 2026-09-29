@@ -8,6 +8,7 @@ import { SettlementPanel } from '../components/SettlementPanel'
 import { Sidebar } from '../components/Sidebar'
 import { Toast, type ToastMessage } from '../components/Toast'
 import { useConfirm } from '../components/ConfirmDialog'
+import { ReceiptViewer } from '../components/ReceiptViewer'
 import { friendlyError, WRITE_ERROR_EVENT } from '../lib/errors'
 import { askName } from '../lib/names'
 import { MAX_RECEIPTS_PER_GROUP } from '../lib/receiptImage'
@@ -73,6 +74,8 @@ export function TripPage({ tripId }: { tripId: string }) {
   const [sheet, setSheet] = useState(false)
   const settingsRef = useRef<HTMLDialogElement>(null)
   const [askConfirm, confirmUi] = useConfirm()
+  // 一覧から開いたレシート写真 (src が null の間は読み込み中)
+  const [receiptView, setReceiptView] = useState<{ src: string | null } | null>(null)
   const [widths, setWidths] = useState<Widths>(loadWidths)
   const [toast, setToast] = useState<ToastMessage | null>(null)
   const [online, setOnline] = useState(() => navigator.onLine)
@@ -498,6 +501,15 @@ export function TripPage({ tripId }: { tripId: string }) {
           nameOf={nameOf}
           memberIds={data.members.map((m) => m.id)}
           categoryOf={categoryOf}
+          onShowReceipt={async (e) => {
+            setReceiptView({ src: null })
+            const src = await store.getReceipt(tripId, e.id).catch(() => null)
+            if (src) setReceiptView({ src })
+            else {
+              setReceiptView(null)
+              notify('写真を読み込めませんでした。電波の良い場所で再度試してください', { tone: 'error' })
+            }
+          }}
           editingId={editing?.id}
           onEdit={(e) => {
             setEditing(e)
@@ -530,6 +542,7 @@ export function TripPage({ tripId }: { tripId: string }) {
 
       <Toast toast={toast} onClose={closeToast} />
       {confirmUi}
+      {receiptView && <ReceiptViewer src={receiptView.src} onClose={() => setReceiptView(null)} />}
 
       <dialog ref={settingsRef} className="settings" onClick={(e) => e.target === e.currentTarget && settingsRef.current?.close()}>
         <div className="row">

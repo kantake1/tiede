@@ -625,10 +625,6 @@ label.button.disabled {
   font-size: 1.25rem;
 }
 
-/* デスクトップではグループ名は見出しに出すので、サイドバーの表示は省く */
-.sb-title {
-  display: none;
-}
 
 .sb-top {
   display: flex;
@@ -679,11 +675,6 @@ label.button.disabled {
   display: none;
   align-items: center;
   justify-content: space-between;
-}
-
-.sb-title {
-  font-size: 1.15rem;
-  margin: 0;
 }
 
 .sb-section {
@@ -908,11 +899,6 @@ dialog.settings::backdrop {
   /* 引き出し時は格納状態を無視して全表示 */
   .layout.collapsed .sb-label {
     display: revert;
-  }
-
-  .sb-title,
-  .layout.collapsed .sb-title {
-    display: block;
   }
 
   .sb-head {
@@ -1524,4 +1510,65 @@ button.sb-trash:focus-visible {
 button.outline {
   border: 1px solid var(--text);
   font-weight: 600;
+}
+
+/* ===== iPhone Safari の横スクロール対策 =====
+ * - 並べた入力欄は縮められるように (グリッドの子は既定で内容の最小幅より縮まない)
+ * - 日付の入力欄は iOS が固有の最小幅を保つため、見た目の既定を外して幅100%に従わせる
+ * - 入力画面は横方向にはみ出さず、横にずれないように
+ */
+.grid2 > *,
+label,
+input,
+select,
+textarea {
+  min-width: 0;
+}
+
+input[type='date'] {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  text-align: left;
+}
+
+input[type='date']::-webkit-date-and-time-value {
+  text-align: left;
+}
+
+@media (max-width: 743px) {
+  .layout.sheet-open .col-form {
+    overflow-x: hidden;
+    touch-action: pan-y;
+  }
+
+  .layout.sheet-open .col-form .card {
+    max-width: 100%;
+  }
+}
+
+/* 一覧のレシートの印 (押すと写真を表示) */
+button.receipt-mark {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  vertical-align: middle;
+}
+
+button.receipt-mark:hover {
+  color: var(--text);
+  background: var(--surface-soft);
+}
+
+@media (pointer: coarse) {
+  button.receipt-mark {
+    padding: 8px;
+    margin: -6px 0 -6px 2px;
+  }
 }

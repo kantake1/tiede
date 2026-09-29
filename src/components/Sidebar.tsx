@@ -69,9 +69,6 @@ export function Sidebar(p: Props) {
           <X size={20} />
         </button>
       </div>
-      <h1 className="sb-label sb-title" onClick={p.onRename} title="クリックして名前を変更">
-        {p.tripName}
-      </h1>
 
       <nav className="sb-label" aria-label="精算するイベント">
         <div className="sb-section">イベント</div>

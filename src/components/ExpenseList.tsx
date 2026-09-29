@@ -1,4 +1,4 @@
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, ReceiptText } from 'lucide-react'
 import { formatDate, groupByDate } from '../lib/date'
 import { yen } from '../lib/format'
 import { computeOwed } from '../lib/split'
@@ -13,11 +13,13 @@ type Props = {
   editingId?: string
   onEdit: (e: Expense) => void
   onDelete: (e: Expense) => void
+  /** 保存したレシート写真を表示する */
+  onShowReceipt: (e: Expense) => void
 }
 
 const MODE_LABEL = { equal: '均等', ratio: '比率', amount: '金額指定', items: '品目別' } as const
 
-export function ExpenseList({ expenses, nameOf, memberIds, categoryOf, editingId, onEdit, onDelete }: Props) {
+export function ExpenseList({ expenses, nameOf, memberIds, categoryOf, editingId, onEdit, onDelete, onShowReceipt }: Props) {
   if (expenses.length === 0) return null
   // 削除済みメンバーは末尾
   const order = (id: string) => {
@@ -42,6 +44,16 @@ export function ExpenseList({ expenses, nameOf, memberIds, categoryOf, editingId
                     <div className="expense-title">
                       {e.title}
                       {categoryOf(e.categoryId) && <span className="chip small-chip">{categoryOf(e.categoryId)}</span>}
+                      {e.hasReceipt && (
+                        <button
+                          className="receipt-mark"
+                          onClick={() => onShowReceipt(e)}
+                          aria-label={`${e.title} のレシートを表示`}
+                          title="レシートを表示"
+                        >
+                          <ReceiptText size={16} />
+                        </button>
+                      )}
                     </div>
                     <div className="muted small">
                       {nameOf(e.payerId)} が立替 · {MODE_LABEL[e.mode]}
