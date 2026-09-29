@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 import { useState } from 'react'
+import { friendlyError } from '../lib/errors'
 import { forgetRecent, getRecent } from '../lib/recent'
 import { getStore, isFirebaseConfigured } from '../store'
 
@@ -16,6 +17,8 @@ export function Home() {
     e.preventDefault()
     if (!name.trim()) return setError('グループ名を入力する')
     if (memberNames.length < 2) return setError('メンバーを2人以上入力する')
+    if (memberNames.some((n) => n.length > 50)) return setError('メンバー名は50文字以内にする')
+    if (memberNames.length > 100) return setError('メンバーは100人までにする')
     setBusy(true)
     setError('')
     try {
@@ -23,7 +26,7 @@ export function Home() {
       const id = await store.createTrip(name.trim(), memberNames)
       location.hash = `#/t/${id}`
     } catch (err) {
-      setError(`作成に失敗した: ${(err as Error).message}`)
+      setError(`作成に失敗した: ${friendlyError(err)}`)
       setBusy(false)
     }
   }

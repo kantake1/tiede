@@ -143,3 +143,47 @@ describe('computeOwed (品目別)', () => {
     expect(owed).toEqual({ A: 750, B: 1750 })
   })
 })
+
+describe('境界値', () => {
+  const bal = (nets: number[]) => nets.map((net, i) => ({ memberId: `m${i}`, paid: 0, owed: 0, net }))
+  const check = (nets: number[]) => {
+    const ts = settle(bal(nets))
+    const after = apply(ts, Object.fromEntries(nets.map((n, i) => [`m${i}`, n])))
+    expect(Object.values(after).every((v) => v === 0)).toBe(true)
+    expect(ts.every((t) => t.amount > 0 && t.from !== t.to)).toBe(true)
+    return ts
+  }
+
+  it('1円を3人で割ると端数はすべて支払者', () => {
+    expect(computeOwed({ amount: 1, payerId: 'A', mode: 'equal', shares: { A: 1, B: 1, C: 1 } })).toEqual({ A: 1, B: 0, C: 0 })
+  })
+
+  it('小数の比率でも合計が一致する', () => {
+    const owed = computeOwed({ amount: 10000, payerId: 'A', mode: 'ratio', shares: { A: 0.1, B: 0.2, C: 0.3 } })
+    expect(Object.values(owed).reduce((s, v) => s + v, 0)).toBe(10000)
+  })
+
+  it('1億円でも整数のまま合計が一致する', () => {
+    const owed = computeOwed({ amount: 100_000_000, payerId: 'A', mode: 'equal', shares: Object.fromEntries(Array.from({ length: 7 }, (_, i) => [`m${i}`, 1])) })
+    expect(Object.values(owed).every(Number.isInteger)).toBe(true)
+    expect(Object.values(owed).reduce((s, v) => s + v, 0)).toBe(100_000_000)
+  })
+
+  it('20人 (厳密解の上限) でも短時間で解ける', () => {
+    const nets = Array.from({ length: 19 }, (_, i) => (i % 2 ? 1 : -1) * (1000 + i * 137))
+    nets.push(-nets.reduce((s, v) => s + v, 0))
+    const t0 = performance.now()
+    const ts = check(nets)
+    expect(performance.now() - t0).toBeLessThan(2000)
+    expect(ts.length).toBeLessThanOrEqual(19)
+  })
+
+  it('21人以上は貪欲法で精算が完了する', () => {
+    const nets = Array.from({ length: 40 }, (_, i) => (i < 20 ? 500 + i : -(500 + i - 20)))
+    expect(check(nets).length).toBeLessThanOrEqual(39)
+  })
+
+  it('全員0なら送金なし', () => {
+    expect(settle(bal([0, 0, 0]))).toEqual([])
+  })
+})

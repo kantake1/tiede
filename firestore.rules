@@ -45,7 +45,7 @@ service cloud.firestore {
           return d.keys().hasOnly(['title', 'amount', 'payerId', 'mode', 'shares', 'items', 'categoryId', 'memo', 'date', 'createdAt'])
             && validName(d.title, 100)
             && d.amount is int && d.amount > 0 && d.amount <= 10000000000
-            && d.payerId is string
+            && d.payerId is string && d.payerId.size() > 0 && d.payerId.size() <= 64
             && d.mode in ['equal', 'ratio', 'amount', 'items']
             && d.shares is map && d.shares.size() <= 100
             && (!('items' in d) || (d.items is list && d.items.size() <= 200))

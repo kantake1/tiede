@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { askName, nameProblem } from '../lib/names'
 
 type Props = {
   title: string
@@ -14,6 +15,7 @@ type Props = {
 /** メンバー・カテゴリ共通の一覧 (追加・名前変更・削除) */
 export function NamesPanel({ title, entries, placeholder, isReferenced, onAdd, onRename, onRemove }: Props) {
   const [name, setName] = useState('')
+  const [error, setError] = useState('')
 
   return (
     <section className="card">
@@ -25,8 +27,8 @@ export function NamesPanel({ title, entries, placeholder, isReferenced, onAdd, o
             <button
               className="ghost small"
               onClick={() => {
-                const n = prompt('名前', m.name)?.trim()
-                if (n && n !== m.name) onRename(m.id, n)
+                const n = askName('名前', 50, { current: m.name, existing: entries.map((x) => x.name) })
+                if (n) onRename(m.id, n)
               }}
             >
               名前変更
@@ -48,14 +50,17 @@ export function NamesPanel({ title, entries, placeholder, isReferenced, onAdd, o
         onSubmit={(e) => {
           e.preventDefault()
           const n = name.trim()
-          if (!n) return
+          const problem = nameProblem(n, 50, entries.map((x) => x.name))
+          if (problem) return setError(problem)
           onAdd(n)
           setName('')
+          setError('')
         }}
       >
         <input className="grow" value={name} onChange={(e) => setName(e.target.value)} placeholder={placeholder} maxLength={50} />
         <button type="submit">追加</button>
       </form>
+      {error && <p className="error small">{error}</p>}
     </section>
   )
 }

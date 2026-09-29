@@ -14,6 +14,11 @@
 - メモ: 各支払いに自由記述 (1000字まで)
 - アーカイブ: カテゴリを1つ選んだ精算欄の「精算済みにする」でサイドバー下部の「アーカイブ」へ移す (`archived` フラグ)。「すべて」の合計・精算から除外。個別に選べば閲覧でき、戻せる
 - 端数: 1円未満は立て替えた人 (payer) が負担
+- 日付: 各支払いに YYYY-MM-DD (端末のローカル日付)。一覧は日付ごと
+- 削除: 確認なしで削除し、通知の「元に戻す」で同じ ID のまま復元
+- 共有: 精算結果を LINE 等に貼れるテキストで共有
+- オフライン: Firestore の端末キャッシュ + Service Worker (本番ビルドのみ) で圏外でも起動・入力。書き込みはサーバー受領を 2.5 秒まで待ち、以後の失敗は通知 (`src/store/firestore.ts` の `write`)
+- 同時編集: 編集中に他の人が更新・削除したらフォーム上で知らせる
 - 精算: 送金回数を最小化 (20人まで部分集合DPで厳密解、超えたら貪欲法)
 - 通貨: 円のみ
 
@@ -37,4 +42,5 @@
 
 - Firebase プロジェクト `tiede-8eae4` (Firestore: asia-northeast1, Standard)。ルールはデプロイ・検証済み。Hosting は未デプロイ
 - App Check: reCAPTCHA Enterprise で設定済み (AI Logic は強制有効)。開発時は `.env.local` の `VITE_APPCHECK_DEBUG_TOKEN` (コンソール登録済み) を使う
-- 候補: 支払いの日付・カテゴリ、送金済みチェック、公開先の決定 (Firebase Hosting 想定で `firebase.json` 用意済み)
+- 候補: 公開先の決定 (Firebase Hosting 想定で `firebase.json` 用意済み)。公開後に実機 iPhone で PWA・Safari を確認する
+- Service Worker のキャッシュ名は固定 (`tiede-v1`)。古いビルドのファイルが溜まるため、大きな変更時は名前を上げる

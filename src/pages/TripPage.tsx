@@ -8,6 +8,7 @@ import { SettlementPanel } from '../components/SettlementPanel'
 import { Sidebar } from '../components/Sidebar'
 import { Toast, type ToastMessage } from '../components/Toast'
 import { friendlyError, WRITE_ERROR_EVENT } from '../lib/errors'
+import { askName } from '../lib/names'
 import { touchRecent } from '../lib/recent'
 import { getStore, isFirebaseConfigured, type TripStore } from '../store'
 import type { Expense, TripData } from '../types'
@@ -38,7 +39,13 @@ export function TripPage({ tripId }: { tripId: string }) {
   const [store, setStore] = useState<TripStore>()
   const [data, setData] = useState<TripData | null>()
   const [error, setError] = useState('')
-  const [editing, setEditing] = useState<Expense | null>(null)
+  const [editing, setEditingState] = useState<Expense | null>(null)
+  // 同じ支払いを編集し直すときもフォームを作り直すための番号
+  const [editRev, setEditRev] = useState(0)
+  const setEditing = (e: Expense | null) => {
+    setEditingState(e)
+    setEditRev((r) => r + 1)
+  }
   const [copied, setCopied] = useState(false)
   // 精算・一覧に含めるカテゴリ。空なら全部。'' は未分類
   const [filter, setFilter] = useState<string[]>([])
@@ -175,7 +182,12 @@ export function TripPage({ tripId }: { tripId: string }) {
   }
 
   // 編集中に他の人が削除した場合はフォームの代わりに知らせる
-  const editingGone = !!editing && !data.expenses.some((e) => e.id === editing.id)
+  const editingNow = editing && data.expenses.find((e) => e.id === editing.id)
+  const editingGone = !!editing && !editingNow
+  // 編集を始めた後に他の人が同じ支払いを更新した (保存すると上書きになる)
+  // (createdAt はサーバー時刻の確定で変わるため比較しない)
+  const content = (e: Expense) => JSON.stringify({ ...e, createdAt: 0 })
+  const editingChanged = !!editing && !!editingNow && content(editingNow) !== content(editing)
 
   const syncLabel = !online ? 'オフライン' : data.pending ? '送信待ち' : ''
 
@@ -195,8 +207,8 @@ export function TripPage({ tripId }: { tripId: string }) {
   }
 
   function rename() {
-    const name = prompt('グループ名', data!.trip.name)?.trim()
-    if (name && name !== data!.trip.name) run(store!.renameTrip(tripId, name))
+    const name = askName('グループ名', 100, { current: data!.trip.name })
+    if (name) run(store!.renameTrip(tripId, name))
   }
 
   function toggleCollapsed() {
@@ -210,7 +222,7 @@ export function TripPage({ tripId }: { tripId: string }) {
   }
 
   async function addCategory() {
-    const name = prompt('新しいカテゴリ名 (例: 旅行、鍋パ)')?.trim()
+    const name = askName('新しいカテゴリ名 (例: 旅行、鍋パ)', 50, { existing: data!.categories.map((c) => c.name) })
     if (name) await run(store!.addCategory(tripId, name))
   }
 
@@ -326,6 +338,14 @@ export function TripPage({ tripId }: { tripId: string }) {
               <X size={20} />
             </button>
           </div>
+          {editingChanged && (
+            <p className="notice">
+              この支払いは編集中に他の人が更新した。保存すると上書きになる。
+              <button className="ghost small" onClick={() => setEditing(editingNow!)}>
+                最新の内容で編集し直す
+              </button>
+            </p>
+          )}
           {editingGone ? (
             <div className="stack">
               <p className="notice">編集中の支払いは他の人が削除した。</p>
@@ -341,7 +361,7 @@ export function TripPage({ tripId }: { tripId: string }) {
           ) : (
             <ExpenseForm
               // 新規入力はサイドバーで1カテゴリだけ選んでいればそれを初期値にする (切り替えで作り直す)
-              key={editing?.id ?? `new-${defaultCategoryId}`}
+              key={editing ? `${editing.id}-${editRev}` : `new-${defaultCategoryId}`}
               members={data.members}
               categories={data.categories.filter((c) => !c.archived || c.id === editing?.categoryId)}
               initial={editing}

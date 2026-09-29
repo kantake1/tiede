@@ -2,6 +2,7 @@ import { Camera, Plus, X } from 'lucide-react'
 import { useState } from 'react'
 import { dateOf, today } from '../lib/date'
 import { friendlyError } from '../lib/errors'
+import { askName } from '../lib/names'
 import { parseNumber, yen } from '../lib/format'
 import { computeOwed } from '../lib/split'
 import type { Category, Expense, ExpenseInput, Item, Member, SplitMode } from '../types'
@@ -151,7 +152,7 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
 
   async function onCategoryChange(v: string) {
     if (v !== NEW_CATEGORY) return setCategoryId(v)
-    const name = prompt('新しいカテゴリ名 (例: 旅行、鍋パ)')?.trim()
+    const name = askName('新しいカテゴリ名 (例: 旅行、鍋パ)', 50, { existing: categories.map((c) => c.name) })
     if (!name) return
     try {
       setCategoryId(await onCreateCategory(name))
