@@ -36,6 +36,13 @@
 
 - `docs/design/DESIGN.md` に従う (Airbnb ベース、サイドバーは Airtable、列の区切りは Cal.com)。色は `src/index.css` 冒頭のトークンだけを使う。Rausch (`--accent`) は主要操作専用
 
+## 開発の流れ
+
+- 作業の正は GitHub Issues (`gh issue list`)。全体像は `docs/BACKLOG.md`、決めたことと理由は `docs/decisions.md` を先に読む
+- 1つの Issue = 1セッション = 1ブランチ (`feat/<番号>-<短い名前>`、基点は `main`)。終わったらプルリクエスト (「Closes #番号」) を作ってセッションを閉じる
+- デザインに関わる変更 (ラベル `design`) は、作業用フォルダで見本を作ってオーナーの承認を得てから実装する
+- マージはオーナーが判断する。決定や優先度が変わったら `docs/decisions.md`・`docs/BACKLOG.md` を更新する
+
 ## 作業体制 (Antigravity CLI への委任)
 
 - 読む量の多い作業 (全体レビュー、画面確認、通しテスト、文書更新) は `agy -p "<指示>" --model gemini-3.8-flash-{high|medium} --output-format json --json-schema <schema>` に任せ、Claude は照合・修正・コミットを担う
