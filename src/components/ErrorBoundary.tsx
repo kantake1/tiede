@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from 'react'
+import { Logo } from './Logo'
 
 /** 描画中の予期しないエラーで画面が真っ白になるのを防ぐ。データは端末とサーバーに残っている */
 export class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
@@ -14,7 +15,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
       <div className="container">
         <header className="app-header">
           <a href="/" className="logo">
-            tiede
+            <Logo />
           </a>
         </header>
         <div className="card stack">

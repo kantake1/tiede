@@ -1284,3 +1284,17 @@ body.resizing .layout {
 .app-header.center {
   text-align: center;
 }
+
+/* ロゴ (マーク + 名前) */
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.brand svg {
+  flex-shrink: 0;
+  border-radius: 5px;
+}

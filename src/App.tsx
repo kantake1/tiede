@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Home } from './pages/Home'
 import { TripPage } from './pages/TripPage'
+import { Logo } from './components/Logo'
 
 // グループは /t/{id}。ホーム画面に追加したとき、そのページがそのまま開くようにパスで表す
 // (以前の #/t/{id} 形式の共有リンクは読み替える)
@@ -26,7 +27,7 @@ export default function App() {
     <div className="container">
       <header className="app-header center">
         <a href="/" className="logo">
-          tiede
+          <Logo />
         </a>
       </header>
       <Home />

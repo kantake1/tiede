@@ -12,6 +12,7 @@ import { askName } from '../lib/names'
 import { touchRecent } from '../lib/recent'
 import { getStore, isFirebaseConfigured, type TripStore } from '../store'
 import type { Expense, TripData } from '../types'
+import { Logo } from '../components/Logo'
 
 const COLLAPSED_KEY = 'tiede:sidebar-collapsed'
 const loadCollapsed = () => {
@@ -132,7 +133,7 @@ export function TripPage({ tripId }: { tripId: string }) {
   useEffect(() => {
     if (data) {
       touchRecent(tripId, data.trip.name)
-      document.title = `${data.trip.name} - tiede`
+      document.title = `${data.trip.name} - おあいこ`
     }
   }, [tripId, data])
 
@@ -153,7 +154,7 @@ export function TripPage({ tripId }: { tripId: string }) {
     <div className="container">
       <header className="app-header">
         <a href="/" className="logo">
-          tiede
+          <Logo />
         </a>
       </header>
       {node}
@@ -275,7 +276,7 @@ export function TripPage({ tripId }: { tripId: string }) {
       {/* デスクトップの上部見出し。サイドバーの状態に関わらず表示 */}
       <header className="apphead">
         <a href="/" className="logo">
-          tiede
+          <Logo />
         </a>
         <span className="apphead-sep" aria-hidden>
           /

@@ -1,5 +1,6 @@
 import { ArchiveRestore, ChevronRight, Link2, PanelLeftClose, PanelLeftOpen, Plus, Settings, X } from 'lucide-react'
 import { yen } from '../lib/format'
+import { Logo } from './Logo'
 
 export type CategoryRow = { key: string; name: string; total: number }
 
@@ -50,7 +51,7 @@ export function Sidebar(p: Props) {
       {/* タブレット・スマホの引き出し用 */}
       <div className="sb-head">
         <a href="/" className="logo sb-label">
-          tiede
+          <Logo />
         </a>
         <button className="ghost icon sb-close" onClick={p.onClose} aria-label="閉じる">
           <X size={20} />
