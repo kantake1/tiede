@@ -49,7 +49,7 @@ export function Sidebar(p: Props) {
       </div>
       {/* タブレット・スマホの引き出し用 */}
       <div className="sb-head">
-        <a href="#/" className="logo sb-label">
+        <a href="/" className="logo sb-label">
           tiede
         </a>
         <button className="ghost icon sb-close" onClick={p.onClose} aria-label="閉じる">

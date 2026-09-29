@@ -38,7 +38,7 @@ if (import.meta.env.VITE_RECAPTCHA_SITE_KEY) {
   })
 }
 
-// 旅行先の圏外・弱電波でも使えるよう、データを端末 (IndexedDB) に保持する。
+// 外出先の圏外・弱電波でも使えるよう、データを端末 (IndexedDB) に保持する。
 // 書き込みは端末に即反映され、電波が戻るとサーバーへ送られる。複数タブでも共有する
 const db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) })
 

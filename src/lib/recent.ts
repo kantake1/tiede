@@ -1,4 +1,4 @@
-// 開いた旅行をこのブラウザに記録し、トップページから再訪できるようにする
+// 開いたグループをこのブラウザに記録し、トップページから再訪できるようにする
 const KEY = 'tiede:recent'
 
 export type RecentTrip = { id: string; name: string; visitedAt: number }

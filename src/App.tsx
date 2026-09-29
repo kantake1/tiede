@@ -2,17 +2,21 @@ import { useEffect, useState } from 'react'
 import { Home } from './pages/Home'
 import { TripPage } from './pages/TripPage'
 
-function parseHash(): { tripId: string | null } {
-  const m = location.hash.match(/^#\/t\/([A-Za-z0-9]+)/)
+// グループは /t/{id}。ホーム画面に追加したとき、そのページがそのまま開くようにパスで表す
+// (以前の #/t/{id} 形式の共有リンクは読み替える)
+function parseRoute(): { tripId: string | null } {
+  const legacy = location.hash.match(/^#\/t\/([A-Za-z0-9]+)/)
+  if (legacy) history.replaceState(null, '', `/t/${legacy[1]}`)
+  const m = location.pathname.match(/^\/t\/([A-Za-z0-9]+)/)
   return { tripId: m ? m[1] : null }
 }
 
 export default function App() {
-  const [route, setRoute] = useState(parseHash)
+  const [route, setRoute] = useState(parseRoute)
   useEffect(() => {
-    const onChange = () => setRoute(parseHash())
-    window.addEventListener('hashchange', onChange)
-    return () => window.removeEventListener('hashchange', onChange)
+    const onChange = () => setRoute(parseRoute())
+    window.addEventListener('popstate', onChange)
+    return () => window.removeEventListener('popstate', onChange)
   }, [])
 
   // グループ画面はサイドバー付きの全幅レイアウト
@@ -20,8 +24,8 @@ export default function App() {
 
   return (
     <div className="container">
-      <header className="app-header">
-        <a href="#/" className="logo">
+      <header className="app-header center">
+        <a href="/" className="logo">
           tiede
         </a>
       </header>

@@ -24,7 +24,7 @@ export function Home() {
     try {
       const store = await getStore()
       const id = await store.createTrip(name.trim(), memberNames)
-      location.hash = `#/t/${id}`
+      location.assign(`/t/${id}`)
     } catch (err) {
       setError(`作成に失敗した: ${friendlyError(err)}`)
       setBusy(false)
@@ -41,7 +41,7 @@ export function Home() {
         <form onSubmit={create} className="stack">
           <label>
             グループ名
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="例: 大学の友達" maxLength={100} />
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="例: いつものメンバー" maxLength={100} />
           </label>
           <label>
             メンバー (改行またはカンマ区切り)
@@ -49,7 +49,7 @@ export function Home() {
               value={membersText}
               onChange={(e) => setMembersText(e.target.value)}
               rows={4}
-              placeholder={'たろう\nはなこ\nじろう'}
+              placeholder={'Aさん\nBさん\nCさん'}
             />
           </label>
           {memberNames.length > 0 && (
@@ -74,7 +74,7 @@ export function Home() {
           <ul className="list">
             {recent.map((r) => (
               <li key={r.id} className="row">
-                <a href={`#/t/${r.id}`} className="grow">
+                <a href={`/t/${r.id}`} className="grow">
                   {r.name}
                 </a>
                 <button

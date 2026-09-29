@@ -16,7 +16,7 @@ function load(): Record<string, TripData> {
 function mutate(tripId: string, fn: (t: TripData) => void) {
   const all = load()
   const t = all[tripId]
-  if (!t) throw new Error('旅行が見つからない')
+  if (!t) throw new Error('グループが見つからない')
   fn(t)
   localStorage.setItem(KEY, JSON.stringify(all))
   listeners.forEach((l) => l())

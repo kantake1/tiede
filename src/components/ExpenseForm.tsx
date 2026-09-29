@@ -154,7 +154,7 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
 
   async function onCategoryChange(v: string) {
     if (v !== NEW_CATEGORY) return setCategoryId(v)
-    const name = askName('新しいカテゴリ名 (例: 旅行、鍋パ)', 50, { existing: categories.map((c) => c.name) })
+    const name = askName('新しいカテゴリ名 (例: 食費、3月の飲み会)', 50, { existing: categories.map((c) => c.name) })
     if (!name) return
     try {
       setCategoryId(await onCreateCategory(name))
@@ -218,7 +218,7 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
         <div className="grid2">
           <label>
             内容
-            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="例: 夕食" maxLength={100} />
+            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="例: 食事代" maxLength={100} />
           </label>
           <label>
             金額 (円)
@@ -411,7 +411,7 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
             onChange={(e) => setMemo(e.target.value)}
             rows={2}
             maxLength={1000}
-            placeholder="例: 駐車場代込み。Aさんは途中参加"
+            placeholder="例: Aさんは途中から参加"
           />
         </label>
 

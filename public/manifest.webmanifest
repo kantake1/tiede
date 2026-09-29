@@ -1,10 +1,9 @@
 {
   "name": "tiede",
   "short_name": "tiede",
-  "description": "旅行や集まりの立替を記録して、誰が誰にいくら送るかを計算する",
+  "description": "みんなで立て替えたお金を記録して、誰が誰にいくら払えばよいかを計算する",
   "lang": "ja",
-  "start_url": "./",
-  "scope": "./",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",

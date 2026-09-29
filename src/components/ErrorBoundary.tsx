@@ -13,7 +13,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
     return (
       <div className="container">
         <header className="app-header">
-          <a href="#/" className="logo">
+          <a href="/" className="logo">
             tiede
           </a>
         </header>

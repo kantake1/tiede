@@ -152,7 +152,7 @@ export function TripPage({ tripId }: { tripId: string }) {
   const status = (node: React.ReactNode) => (
     <div className="container">
       <header className="app-header">
-        <a href="#/" className="logo">
+        <a href="/" className="logo">
           tiede
         </a>
       </header>
@@ -233,7 +233,7 @@ export function TripPage({ tripId }: { tripId: string }) {
   }
 
   async function addCategory() {
-    const name = askName('新しいカテゴリ名 (例: 旅行、鍋パ)', 50, { existing: data!.categories.map((c) => c.name) })
+    const name = askName('新しいカテゴリ名 (例: 食費、3月の飲み会)', 50, { existing: data!.categories.map((c) => c.name) })
     if (name) await run(store!.addCategory(tripId, name))
   }
 
@@ -274,7 +274,7 @@ export function TripPage({ tripId }: { tripId: string }) {
     >
       {/* デスクトップの上部見出し。サイドバーの状態に関わらず表示 */}
       <header className="apphead">
-        <a href="#/" className="logo">
+        <a href="/" className="logo">
           tiede
         </a>
         <span className="apphead-sep" aria-hidden>
@@ -494,7 +494,7 @@ export function TripPage({ tripId }: { tripId: string }) {
         <NamesPanel
           title="カテゴリ"
           entries={data.categories}
-          placeholder="例: 旅行、鍋パ"
+          placeholder="例: 食費、3月の飲み会"
           isReferenced={(id) => data.expenses.some((e) => e.categoryId === id)}
           onAdd={(name) => run(store.addCategory(tripId, name))}
           onRename={(id, name) => run(store.renameCategory(tripId, id, name))}

@@ -1279,3 +1279,8 @@ body.resizing .layout {
 .owed-item {
   white-space: nowrap;
 }
+
+/* トップ (グループ作成) の見出しは中央 */
+.app-header.center {
+  text-align: center;
+}

@@ -51,7 +51,7 @@ export function SettlementPanel({ members, expenses, nameOf, action, groupName, 
           className="small with-icon share-text"
           onClick={() => onShareText(settlementText({ groupName, label, transfers, total, nameOf, url: location.href }))}
         >
-          <Share2 size={16} /> 精算結果をテキストで共有
+          <Share2 size={16} /> 精算結果を共有
         </button>
       )}
 
