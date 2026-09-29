@@ -198,7 +198,7 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
 
   const allOn = targets.length === members.length
 
-  if (members.length === 0) return <p className="notice">支払いを記録するには、先に「メンバー・イベント」からメンバーを追加する。</p>
+  if (members.length === 0) return <p className="notice">支払いを記録するには、先に「設定」からメンバーを追加する。</p>
 
   return (
     <form className="expense-form stack" onSubmit={submit}>

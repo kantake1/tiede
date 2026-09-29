@@ -446,7 +446,7 @@ export function TripPage({ tripId }: { tripId: string }) {
           action={
             bulk ? (
               <button className="small with-icon" onClick={archiveMany}>
-                <Archive size={16} /> まとめて精算
+                <Archive size={16} /> まとめて精算済みにする
               </button>
             ) : (
               selected &&
@@ -497,7 +497,7 @@ export function TripPage({ tripId }: { tripId: string }) {
 
       <dialog ref={settingsRef} className="settings" onClick={(e) => e.target === e.currentTarget && settingsRef.current?.close()}>
         <div className="row">
-          <h2 className="grow">メンバー・イベント</h2>
+          <h2 className="grow">設定</h2>
           <button className="ghost icon" onClick={() => settingsRef.current?.close()} aria-label="閉じる">
             <X size={20} />
           </button>
