@@ -1,6 +1,6 @@
 // tiede の Service Worker。画面 (HTML/JS/CSS/画像) を端末に保存し、圏外でも起動できるようにする。
 // データ (Firestore) は Firebase SDK が IndexedDB に保持するので、ここでは扱わない。
-const CACHE = 'oaiko-v3'
+const CACHE = 'oaiko-v4'
 
 // 初回訪問ではページの読み込みが SW の起動より先に終わり、JS/CSS が保存されない。
 // ページから読み込み済みファイルの一覧を受け取って保存し、次回から圏外でも起動できるようにする
@@ -11,7 +11,7 @@ self.addEventListener('message', (event) => {
 })
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', './manifest.webmanifest', './favicon.svg'])))
+  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', './manifest.webmanifest', './favicon.svg?v=3'])))
   self.skipWaiting()
 })
 
@@ -65,19 +65,16 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // その他 (アイコンなど): 保存済みを返しつつ裏で更新
+  // その他 (アイコンなど): 最新を優先し (ブラウザのキャッシュも通さず確認)、圏外なら保存済みを返す
   event.respondWith(
-    caches.match(req).then((hit) => {
-      const net = fetch(req)
-        .then((res) => {
-          if (res.ok) {
-            const copy = res.clone()
-            caches.open(CACHE).then((c) => c.put(req, copy))
-          }
-          return res
-        })
-        .catch(() => hit || Response.error())
-      return hit || net
-    }),
+    fetch(req, { cache: 'no-cache' })
+      .then((res) => {
+        if (res.ok) {
+          const copy = res.clone()
+          caches.open(CACHE).then((c) => c.put(req, copy))
+        }
+        return res
+      })
+      .catch(() => caches.match(req).then((hit) => hit || Response.error())),
   )
 })
