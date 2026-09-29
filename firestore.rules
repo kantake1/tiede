@@ -35,8 +35,9 @@ service cloud.firestore {
         allow create: if request.resource.data.keys().hasOnly(['name', 'createdAt'])
           && validName(request.resource.data.name, 50)
           && tripExists(tripId);
-        allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])
-          && validName(request.resource.data.name, 50);
+        allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'archived'])
+          && validName(request.resource.data.name, 50)
+          && (!('archived' in request.resource.data) || request.resource.data.archived is bool);
       }
 
       match /expenses/{expenseId} {

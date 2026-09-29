@@ -1,3 +1,4 @@
+import { ChevronRight } from 'lucide-react'
 import { yen } from '../lib/format'
 import { computeOwed } from '../lib/split'
 import type { Expense } from '../types'
@@ -37,7 +38,9 @@ export function ExpenseList({ expenses, nameOf, categoryOf, editingId, onEdit, o
               </div>
               {e.items && e.items.length > 0 && (
                 <details className="small">
-                  <summary>品目 ({e.items.length})</summary>
+                  <summary>
+                    <ChevronRight size={14} className="chevron" /> 品目 ({e.items.length})
+                  </summary>
                   <ul className="item-lines">
                     {e.items.map((it, i) => (
                       <li key={i}>

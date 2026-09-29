@@ -571,9 +571,11 @@ label.button.disabled {
  * <744px: 一覧のみ。サイドバーは引き出し、追加は＋ボタンから全画面
  */
 .layout {
-  --sb: 240px;
+  /* --sb-w / --form-w はドラッグで変えた幅 (TripPage が style で渡す) */
+  --sb: var(--sb-w, 240px);
   display: grid;
-  grid-template-columns: var(--sb) minmax(340px, 440px) minmax(0, 1fr);
+  /* 入力欄が広げられても精算・一覧は 360px を下回らない */
+  grid-template-columns: var(--sb) minmax(340px, var(--form-w, 420px)) minmax(360px, 1fr);
   grid-template-areas: 'side form list';
   min-height: 100vh;
 }
@@ -700,6 +702,7 @@ button.icon {
 
 .col-form {
   grid-area: form;
+  position: relative;
   padding: 0 16px;
   border-right: 1px solid var(--border);
 }
@@ -730,6 +733,47 @@ button.icon {
   margin-top: 16px;
 }
 
+/* 列幅のドラッグハンドル (col-form の左右の境界) */
+.resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 9px;
+  z-index: 5;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.resize-handle.left {
+  left: -5px;
+}
+
+.resize-handle.right {
+  right: -5px;
+}
+
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  inset: 0 3px;
+  border-radius: 2px;
+}
+
+.resize-handle:hover::after,
+.resize-handle:focus-visible::after,
+body.resizing .resize-handle:active::after {
+  background: var(--text);
+}
+
+.resize-handle:focus-visible {
+  outline: none;
+}
+
+body.resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
 dialog.settings {
   width: min(560px, calc(100vw - 32px));
   max-height: calc(100vh - 32px);
@@ -748,7 +792,7 @@ dialog.settings::backdrop {
 @media (max-width: 1127px) {
   .layout,
   .layout.collapsed {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: minmax(280px, var(--form-w, 1fr)) minmax(320px, 1fr);
     grid-template-areas:
       'top top'
       'form list';
@@ -790,7 +834,8 @@ dialog.settings::backdrop {
     display: inline-block;
   }
 
-  .sb-collapse {
+  .sb-collapse,
+  .resize-handle.left {
     display: none;
   }
 
@@ -861,12 +906,16 @@ dialog.settings::backdrop {
     display: inline-block;
   }
 
+  .resize-handle {
+    display: none;
+  }
+
   .col-list {
     padding: 0 12px 96px;
   }
 
   .fab {
-    display: block;
+    display: flex;
     position: fixed;
     right: 16px;
     bottom: calc(16px + env(safe-area-inset-bottom));
@@ -881,4 +930,76 @@ dialog.settings::backdrop {
   .layout.sheet-open .fab {
     display: none;
   }
+}
+
+/* アイコン (lucide-react) */
+svg.lucide {
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.with-icon,
+label.button {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+button.icon svg {
+  display: block;
+}
+
+.fab {
+  align-items: center;
+  justify-content: center;
+}
+
+.transfers .arrow {
+  color: var(--muted);
+}
+
+.card-head {
+  margin-bottom: 12px;
+}
+
+.card-head h2 {
+  margin: 0;
+}
+
+/* details の既定の三角をアイコンに置き換え */
+summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+summary::-webkit-details-marker {
+  display: none;
+}
+
+summary .chevron {
+  transition: transform 0.15s ease;
+}
+
+details[open] > summary .chevron {
+  transform: rotate(90deg);
+}
+
+/* アーカイブ */
+.sb-archive {
+  margin-top: 16px;
+}
+
+.sb-archive summary {
+  cursor: pointer;
+}
+
+.sb-archive .sb-cats {
+  margin-top: 4px;
+}
+
+.sb-archive .sb-cats .grow label {
+  color: var(--muted);
 }

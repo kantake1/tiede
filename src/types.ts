@@ -42,6 +42,8 @@ export type Trip = {
 export type Category = {
   id: string
   name: string
+  /** 精算済み。サイドバーの「アーカイブ」に移る */
+  archived: boolean
   createdAt: number
 }
 

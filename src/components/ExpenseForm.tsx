@@ -1,3 +1,4 @@
+import { Camera, Plus, X } from 'lucide-react'
 import { useState } from 'react'
 import { parseNumber, yen } from '../lib/format'
 import { computeOwed } from '../lib/split'
@@ -190,7 +191,7 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
         <div className="receipt">
           <label className={`button ${reading ? 'disabled' : ''}`}>
             <input type="file" accept="image/*" hidden disabled={reading} onChange={(e) => onReceipt(e.target.files?.[0])} />
-            {reading ? '読み取り中…' : 'レシートを読み取る'}
+            <Camera size={18} /> {reading ? '読み取り中…' : 'レシートを読み取る'}
           </label>
           <span className="muted small">品目と合計を自動入力する (画像は保存しない)</span>
           {readError && <p className="error small">{readError}</p>}
@@ -274,7 +275,7 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
                       aria-label={`${i + 1}行目の金額`}
                     />
                     <button type="button" className="ghost small danger" onClick={() => setItems(items.filter((_, j) => j !== i))} aria-label={`${i + 1}行目を削除`}>
-                      ×
+                      <X size={16} />
                     </button>
                   </div>
                   <div className="chips">
@@ -294,8 +295,8 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
               ))}
             </ul>
             <div className="label-row">
-              <button type="button" className="ghost small" onClick={() => setItems([...items, { name: '', priceText: '', memberIds: allIds() }])}>
-                ＋ 品目を追加
+              <button type="button" className="ghost small with-icon" onClick={() => setItems([...items, { name: '', priceText: '', memberIds: allIds() }])}>
+                <Plus size={16} /> 品目を追加
               </button>
               {parsedItems.length > 0 && (
                 <span className="small muted">

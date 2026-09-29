@@ -11,6 +11,7 @@ export interface TripStore {
   addCategory(tripId: string, name: string): Promise<string>
   renameCategory(tripId: string, categoryId: string, name: string): Promise<void>
   removeCategory(tripId: string, categoryId: string): Promise<void>
+  setCategoryArchived(tripId: string, categoryId: string, archived: boolean): Promise<void>
   addExpense(tripId: string, expense: ExpenseInput): Promise<void>
   updateExpense(tripId: string, expenseId: string, expense: ExpenseInput): Promise<void>
   deleteExpense(tripId: string, expenseId: string): Promise<void>

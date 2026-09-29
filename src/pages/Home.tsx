@@ -1,3 +1,4 @@
+import { X } from 'lucide-react'
 import { useState } from 'react'
 import { forgetRecent, getRecent } from '../lib/recent'
 import { getStore, isFirebaseConfigured } from '../store'
@@ -81,7 +82,7 @@ export function Home() {
                   }}
                   aria-label={`${r.name} を履歴から削除`}
                 >
-                  ×
+                  <X size={16} />
                 </button>
               </li>
             ))}

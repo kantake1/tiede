@@ -49,7 +49,7 @@ export const localStore: TripStore = {
     // categories 追加前に保存されたデータにも対応する
     const l = () => {
       const t = load()[tripId]
-      onData(t ? { ...t, categories: t.categories ?? [] } : null)
+      onData(t ? { ...t, categories: (t.categories ?? []).map((c) => ({ ...c, archived: c.archived ?? false })) } : null)
     }
     listeners.add(l)
     queueMicrotask(l)
@@ -74,7 +74,7 @@ export const localStore: TripStore = {
 
   async addCategory(tripId, name) {
     const id = newId()
-    mutate(tripId, (t) => (t.categories = [...(t.categories ?? []), { id, name, createdAt: Date.now() }]))
+    mutate(tripId, (t) => (t.categories = [...(t.categories ?? []), { id, name, archived: false, createdAt: Date.now() }]))
     return id
   },
 
@@ -84,6 +84,10 @@ export const localStore: TripStore = {
 
   async removeCategory(tripId, categoryId) {
     mutate(tripId, (t) => (t.categories = t.categories.filter((c) => c.id !== categoryId)))
+  },
+
+  async setCategoryArchived(tripId, categoryId, archived) {
+    mutate(tripId, (t) => t.categories.forEach((c) => c.id === categoryId && (c.archived = archived)))
   },
 
   async addExpense(tripId, e) {

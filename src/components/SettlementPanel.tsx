@@ -1,4 +1,5 @@
-import { useMemo } from 'react'
+import { ArrowRight, ChevronRight } from 'lucide-react'
+import { useMemo, type ReactNode } from 'react'
 import { yen } from '../lib/format'
 import { computeBalances, settle } from '../lib/settle'
 import type { Expense, Member } from '../types'
@@ -7,9 +8,11 @@ type Props = {
   members: Member[]
   expenses: Expense[]
   nameOf: (id: string) => string
+  /** 見出し右に置く操作 (精算済みにする など) */
+  action?: ReactNode
 }
 
-export function SettlementPanel({ members, expenses, nameOf }: Props) {
+export function SettlementPanel({ members, expenses, nameOf, action }: Props) {
   const { balances, transfers, total } = useMemo(() => {
     const balances = computeBalances(members, expenses)
     return { balances, transfers: settle(balances), total: expenses.reduce((s, e) => s + e.amount, 0) }
@@ -17,7 +20,10 @@ export function SettlementPanel({ members, expenses, nameOf }: Props) {
 
   return (
     <section className="card settlement">
-      <h2>精算</h2>
+      <div className="row card-head">
+        <h2 className="grow">精算</h2>
+        {action}
+      </div>
       {expenses.length === 0 ? (
         <p className="muted">支払いを追加すると精算結果が表示される。</p>
       ) : transfers.length === 0 ? (
@@ -27,7 +33,7 @@ export function SettlementPanel({ members, expenses, nameOf }: Props) {
           {transfers.map((t, i) => (
             <li key={i}>
               <span className="from">{nameOf(t.from)}</span>
-              <span className="arrow">→</span>
+              <ArrowRight size={18} className="arrow" aria-label="から" />
               <span className="to">{nameOf(t.to)}</span>
               <span className="amount">{yen(t.amount)}</span>
             </li>
@@ -37,7 +43,9 @@ export function SettlementPanel({ members, expenses, nameOf }: Props) {
 
       {expenses.length > 0 && (
         <details>
-          <summary>内訳 (総額 {yen(total)})</summary>
+          <summary>
+            <ChevronRight size={14} className="chevron" /> 内訳 (総額 {yen(total)})
+          </summary>
           <table className="balances">
             <thead>
               <tr>

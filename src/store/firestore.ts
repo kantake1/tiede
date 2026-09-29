@@ -46,7 +46,7 @@ const expenses = (tripId: string) => collection(db, 'trips', tripId, 'expenses')
 const millis = (v: unknown) => (v as Timestamp | null)?.toMillis?.() ?? Date.now()
 
 const toMember = (id: string, d: DocumentData): Member => ({ id, name: d.name, createdAt: millis(d.createdAt) })
-const toCategory = (id: string, d: DocumentData): Category => ({ id, name: d.name, createdAt: millis(d.createdAt) })
+const toCategory = (id: string, d: DocumentData): Category => ({ id, name: d.name, archived: d.archived === true, createdAt: millis(d.createdAt) })
 const toExpense = (id: string, d: DocumentData): Expense => ({
   id,
   title: d.title,
@@ -153,6 +153,10 @@ export const firestoreStore: TripStore = {
 
   async removeCategory(tripId, categoryId) {
     await deleteDoc(doc(categories(tripId), categoryId))
+  },
+
+  async setCategoryArchived(tripId, categoryId, archived) {
+    await updateDoc(doc(categories(tripId), categoryId), { archived })
   },
 
   async addExpense(tripId, e) {
