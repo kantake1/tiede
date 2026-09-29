@@ -34,6 +34,12 @@
 
 - `docs/design/DESIGN.md` に従う (Airbnb ベース、サイドバーは Airtable、列の区切りは Cal.com)。色は `src/index.css` 冒頭のトークンだけを使う。Rausch (`--accent`) は主要操作専用
 
+## 作業体制 (Antigravity CLI への委任)
+
+- 読む量の多い作業 (全体レビュー、画面確認、通しテスト、文書更新) は `agy -p "<指示>" --model gemini-3.8-flash-{high|medium} --output-format json --json-schema <schema>` に任せ、Claude は照合・修正・コミットを担う
+- 指摘は必ずコードで確かめてから直す (誤った指摘が混ざる)。コマンド実行やファイル操作をさせるときは `--dangerously-skip-permissions`、作業前に git をきれいにしておく
+- 通しテストは `.qa/scenario.mjs` (3人・2日間の旅行の10手順、git 管理外)。Playwright は作業用フォルダに入れたものを参照している
+
 ## コマンド
 
 - `npm run dev` / `npm test` / `npm run build` (型チェック込み) / `npm run lint`
