@@ -8,7 +8,7 @@ export type ReceiptResult = {
 }
 
 const model = getGenerativeModel(getAI(app, { backend: new GoogleAIBackend() }), {
-  model: 'gemini-3.8-flash',
+  model: 'gemini-3.5-flash-lite',
   generationConfig: {
     responseMimeType: 'application/json',
     responseSchema: Schema.object({

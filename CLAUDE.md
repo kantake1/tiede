@@ -9,7 +9,7 @@
 - 同期: Firestore の onSnapshot でリアルタイム共同編集
 - 割り方: 支払いごとに対象者を選択し、均等 / 比率 / 金額指定 / 品目別
 - 品目別: 品目ごとに対象者を選び、税・値引など品目合計と総額の差は各自の品目小計に比例配分
-- レシート読み取り: Firebase AI Logic (Gemini Developer API, `gemini-3.8-flash`) で品目と合計を抽出。画像は保存しない (`src/lib/receipt.ts`)
+- レシート読み取り: Firebase AI Logic (Gemini Developer API, `gemini-3.5-flash-lite`。`gemini-3.8-flash` は無料枠が1日20回のため不採用) で品目と合計を抽出。画像は保存しない (`src/lib/receipt.ts`)
 - カテゴリ: 1つの共有URL (グループ) 内に「旅行」「鍋パ」等を作成。1支払い=1カテゴリ。精算は選んだカテゴリ (複数可) を合算
 - メモ: 各支払いに自由記述 (1000字まで)
 - 端数: 1円未満は立て替えた人 (payer) が負担
@@ -31,5 +31,5 @@
 ## 未完了・次の候補
 
 - Firebase プロジェクト `tiede-8eae4` (Firestore: asia-northeast1, Standard)。ルールはデプロイ・検証済み。Hosting は未デプロイ
-- Firebase AI Logic が未有効化 (コンソールで Get started が必要)。2026/11/2 以降 App Check 必須のため要対応
+- App Check: reCAPTCHA Enterprise で設定済み (AI Logic は強制有効)。開発時は `.env.local` の `VITE_APPCHECK_DEBUG_TOKEN` (コンソール登録済み) を使う
 - 候補: 支払いの日付・カテゴリ、送金済みチェック、公開先の決定 (Firebase Hosting 想定で `firebase.json` 用意済み)
