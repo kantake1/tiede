@@ -1388,14 +1388,16 @@ body.resizing .layout {
   margin-top: 18px;
 }
 
-button.danger-fill {
+button.danger-fill,
+label.button.danger-fill {
   background: var(--danger);
   border-color: var(--danger);
   color: #ffffff;
   font-weight: 600;
 }
 
-button.danger-fill:hover {
+button.danger-fill:hover,
+label.button.danger-fill:hover {
   background: var(--danger);
   filter: brightness(0.92);
 }
@@ -1471,4 +1473,55 @@ button.sb-trash:focus-visible {
     background: var(--danger);
     color: #ffffff;
   }
+}
+
+/* レシート写真の表示 */
+.viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
+  background: rgb(0 0 0 / 0.78);
+  animation: sb-fade 0.15s ease;
+}
+
+.viewer-bar {
+  width: min(520px, 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.viewer-bar button.icon {
+  color: #ffffff;
+}
+
+.viewer img {
+  max-width: min(520px, 100%);
+  max-height: 80dvh;
+  border-radius: 8px;
+  background: #ffffff;
+  object-fit: contain;
+}
+
+.viewer-loading {
+  color: #ffffff;
+}
+
+.receipt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+button.outline {
+  border: 1px solid var(--text);
+  font-weight: 600;
 }

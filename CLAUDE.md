@@ -9,7 +9,7 @@
 - 同期: Firestore の onSnapshot でリアルタイム共同編集
 - 割り方: 支払いごとに対象者を選択し、均等 / 比率 / 金額指定 / 品目別
 - 品目別: 品目ごとに対象者を選び、税・値引など品目合計と総額の差は各自の品目小計に比例配分
-- レシート読み取り: Firebase AI Logic (Gemini Developer API, `gemini-3.5-flash-lite`。`gemini-3.8-flash` は無料枠が1日20回のため不採用) で品目と合計を抽出。画像は保存しない (`src/lib/receipt.ts`)
+- レシート読み取り: Firebase AI Logic (Gemini Developer API, `gemini-3.5-flash-lite`。`gemini-3.8-flash` は無料枠が1日20回のため不採用) で品目と合計を抽出 (`src/lib/receipt.ts`)。写真は約300KB以下に圧縮して Firestore の `receipts/{支払いID}` に保存 (Cloud Storage は Blaze プランが必要なため不使用、`src/lib/receiptImage.ts`)。1グループ300枚まで。読み取り後は「レシートを表示」「再度読み取る」(置き換えの警告あり)
 - イベント: 1つの共有URL (グループ) 内に「旅行」「鍋パ」等を作成。1支払い=1イベント。精算は選んだイベント (複数可) を合算
 - メモ: 各支払いに自由記述 (1000字まで)
 - イベントの削除: サイドバーのゴミ箱 (デスクトップは金額の右、タブレット・スマホは行を左へスワイプ) または設定から。確認後に削除し、中の支払いは消さず「未分類」になる

@@ -1,8 +1,10 @@
-import { Camera, Plus, X } from 'lucide-react'
-import { useState } from 'react'
+import { Camera, Plus, ReceiptText, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { dateOf, today } from '../lib/date'
 import { friendlyError } from '../lib/errors'
 import { askName } from '../lib/names'
+import { compressReceipt } from '../lib/receiptImage'
+import { ReceiptViewer } from './ReceiptViewer'
 import { parseNumber, yen } from '../lib/format'
 import { computeOwed } from '../lib/split'
 import type { Category, Expense, ExpenseInput, Item, Member, SplitMode } from '../types'
@@ -15,7 +17,12 @@ type Props = {
   onCreateCategory: (name: string) => Promise<string>
   /** Firebase 未設定時は undefined (レシート読み取り不可) */
   readReceipt?: (file: File) => Promise<{ storeName: string; total: number; items: { name: string; price: number }[] }>
-  onSubmit: (input: ExpenseInput) => Promise<void>
+  /** 編集中の支払いに保存済みのレシート写真を読み込む */
+  getReceipt?: () => Promise<string | null>
+  /** グループの保存枚数の上限に達している (写真は保存しない) */
+  receiptLimitReached?: boolean
+  /** receipt: 新しく読み取ったレシート写真 (変更が無ければ undefined) */
+  onSubmit: (input: ExpenseInput, receipt?: string) => Promise<void>
   onCancel?: () => void
 }
 
@@ -31,12 +38,43 @@ const MODES: { value: SplitMode; label: string }[] = [
 const NEW_CATEGORY = '__new__'
 const MAX_AMOUNT = 100_000_000
 
-export function ExpenseForm({ members, categories, initial, defaultCategoryId, onCreateCategory, readReceipt, onSubmit, onCancel }: Props) {
+// 説明文は端末ごとに初回だけ表示する
+const HINT_READ = 'tiede:hint-receipt-read'
+const HINT_SAVED = 'tiede:hint-receipt-saved'
+const seen = (key: string) => {
+  try {
+    return localStorage.getItem(key) === '1'
+  } catch {
+    return false
+  }
+}
+const markSeen = (key: string) => {
+  try {
+    localStorage.setItem(key, '1')
+  } catch {
+    // 保存できなくても動作に影響しない
+  }
+}
+
+export function ExpenseForm({
+  members,
+  categories,
+  initial,
+  defaultCategoryId,
+  onCreateCategory,
+  readReceipt,
+  getReceipt,
+  receiptLimitReached,
+  onSubmit,
+  onCancel,
+}: Props) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [amountText, setAmountText] = useState(initial ? String(initial.amount) : '')
   const [payerChoice, setPayerId] = useState(initial?.payerId ?? members[0]?.id ?? '')
   const [mode, setMode] = useState<SplitMode>(initial?.mode ?? 'equal')
-  const [categoryId, setCategoryId] = useState(initial ? (categories.some((c) => c.id === initial.categoryId) ? initial.categoryId! : '') : defaultCategoryId)
+  const [categoryId, setCategoryId] = useState(
+    initial ? (categories.some((c) => c.id === initial.categoryId) ? initial.categoryId! : '') : defaultCategoryId,
+  )
   const [memo, setMemo] = useState(initial?.memo ?? '')
   const [date, setDate] = useState(initial ? dateOf(initial) : today())
   const [included, setIncluded] = useState<Record<string, boolean>>(() =>
@@ -57,6 +95,21 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
   const [busy, setBusy] = useState(false)
   const [reading, setReading] = useState(false)
   const [readError, setReadError] = useState('')
+  const [receiptNote, setReceiptNote] = useState('')
+  // 新しく読み取った写真 (undefined は未変更)。保存済みの写真は initial.hasReceipt で判断する
+  const [receiptNew, setReceiptNew] = useState<string>()
+  const hasPhoto = receiptNew !== undefined || !!initial?.hasReceipt
+  const [viewer, setViewer] = useState<{ src: string | null } | null>(null)
+  const [confirmReread, setConfirmReread] = useState(false)
+  // 一度表示した説明文は、同じ入力欄に戻っても再び出さない
+  const [hintRead, setHintRead] = useState(() => !seen(HINT_READ))
+  const [hintSaved, setHintSaved] = useState(() => !seen(HINT_SAVED))
+  const showReadHint = hintRead && !hasPhoto
+  const showSavedHint = hintSaved && hasPhoto
+  useEffect(() => {
+    if (showReadHint) markSeen(HINT_READ)
+    if (showSavedHint) markSeen(HINT_SAVED)
+  }, [showReadHint, showSavedHint])
 
   // フォーム表示後に追加されたメンバーは、新規入力なら対象に含める
   const isIn = (id: string) => included[id] ?? !initial
@@ -138,6 +191,19 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
     if (!file || !readReceipt) return
     setReading(true)
     setReadError('')
+    setReceiptNote('')
+    setHintRead(false)
+    // 写真の圧縮は読み取りと並行して行い、読み取りに失敗しても写真は保存する
+    const photo = receiptLimitReached ? Promise.resolve(null) : compressReceipt(file)
+    photo.then((img) => {
+      if (img) setReceiptNew(img)
+      else
+        setReceiptNote(
+          receiptLimitReached
+            ? 'このグループの保存枚数の上限に達したため、写真は保存しません'
+            : 'この画像形式は保存できないため、写真は保存しません',
+        )
+    })
     try {
       const r = await readReceipt(file)
       if (r.items.length === 0) throw new Error('品目を読み取れませんでした')
@@ -149,6 +215,19 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
       setReadError(`読み取れませんでした: ${friendlyError(e)}`)
     } finally {
       setReading(false)
+    }
+  }
+
+  async function showReceipt() {
+    if (receiptNew) return setViewer({ src: receiptNew })
+    setViewer({ src: null })
+    try {
+      const src = (await getReceipt?.()) ?? null
+      if (!src) throw new Error('none')
+      setViewer({ src })
+    } catch {
+      setViewer(null)
+      setReceiptNote('写真を読み込めませんでした。電波の良い場所で再度試してください')
     }
   }
 
@@ -168,19 +247,25 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
     if (error) return
     setBusy(true)
     try {
-      await onSubmit({
-        title: title.trim(),
-        amount,
-        payerId,
-        mode,
-        shares: mode === 'items' ? {} : shares,
-        items: mode === 'items' ? parsedItems : [],
-        categoryId,
-        memo: memo.trim(),
-        date,
-      })
+      await onSubmit(
+        {
+          title: title.trim(),
+          amount,
+          payerId,
+          mode,
+          shares: mode === 'items' ? {} : shares,
+          items: mode === 'items' ? parsedItems : [],
+          categoryId,
+          memo: memo.trim(),
+          date,
+        },
+        receiptNew,
+      )
       if (!initial) {
         // 保存に失敗した (onSubmit が例外) 場合はここに来ないので、入力は残る
+        setReceiptNew(undefined)
+        setReceiptNote('')
+        setHintSaved(false)
         setTitle('')
         setAmountText('')
         setMemo('')
@@ -206,12 +291,29 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
       <fieldset className="form-fields" disabled={busy}>
         {readReceipt && (
           <div className="receipt">
-            <label className={`button ${reading ? 'disabled' : ''}`}>
-              <input type="file" accept="image/*" hidden disabled={reading} onChange={(e) => onReceipt(e.target.files?.[0])} />
-              <Camera size={18} /> {reading ? '読み取り中…' : 'レシートを読み取る'}
-            </label>
-            <span className="muted small">品目と合計を自動入力します (画像は保存しません)</span>
+            {hasPhoto ? (
+              <>
+                <div className="receipt-actions">
+                  <button type="button" className="outline with-icon" onClick={showReceipt}>
+                    <ReceiptText size={18} /> レシートを表示
+                  </button>
+                  <button type="button" className="ghost with-icon" disabled={reading} onClick={() => setConfirmReread(true)}>
+                    <Camera size={18} /> {reading ? '読み取り中…' : '再度読み取る'}
+                  </button>
+                </div>
+                {showSavedHint && <span className="muted small">レシートの写真を保存しています</span>}
+              </>
+            ) : (
+              <>
+                <label className={`button ${reading ? 'disabled' : ''}`}>
+                  <input type="file" accept="image/*" hidden disabled={reading} onChange={(e) => onReceipt(e.target.files?.[0])} />
+                  <Camera size={18} /> {reading ? '読み取り中…' : 'レシートを読み取る'}
+                </label>
+                {showReadHint && <span className="muted small">品目と合計を自動入力し、写真も保存します</span>}
+              </>
+            )}
             {readError && <p className="error small">{readError}</p>}
+            {receiptNote && <p className="muted small">{receiptNote}</p>}
           </div>
         )}
 
@@ -431,6 +533,35 @@ export function ExpenseForm({ members, categories, initial, defaultCategoryId, o
           )}
         </div>
       </fieldset>
+      {confirmReread && (
+        <div className="modal-scrim" onClick={() => setConfirmReread(false)}>
+          <div className="modal" role="alertdialog" aria-modal="true" aria-labelledby="reread-title" onClick={(e) => e.stopPropagation()}>
+            <p id="reread-title" className="modal-title">
+              再度読み取りますか？
+            </p>
+            <p className="modal-body">現在保存されているレシートの写真は削除され、新しい写真に置き換わります。</p>
+            <div className="modal-actions">
+              <button type="button" onClick={() => setConfirmReread(false)}>
+                キャンセル
+              </button>
+              {/* iPhone は確認後の自動クリックで写真選択を開かないため、このボタン自体を写真選択にする */}
+              <label className="button danger-fill">
+                <input
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={(e) => {
+                    setConfirmReread(false)
+                    onReceipt(e.target.files?.[0])
+                  }}
+                />
+                読み取る
+              </label>
+            </div>
+          </div>
+        </div>
+      )}
+      {viewer && <ReceiptViewer src={viewer.src} onClose={() => setViewer(null)} />}
     </form>
   )
 }

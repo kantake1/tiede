@@ -10,6 +10,7 @@ import { Toast, type ToastMessage } from '../components/Toast'
 import { useConfirm } from '../components/ConfirmDialog'
 import { friendlyError, WRITE_ERROR_EVENT } from '../lib/errors'
 import { askName } from '../lib/names'
+import { MAX_RECEIPTS_PER_GROUP } from '../lib/receiptImage'
 import { touchRecent } from '../lib/recent'
 import { getStore, isFirebaseConfigured, type TripStore } from '../store'
 import type { Expense, TripData } from '../types'
@@ -44,6 +45,11 @@ export function TripPage({ tripId }: { tripId: string }) {
   const [data, setData] = useState<TripData | null>()
   const [error, setError] = useState('')
   const [editing, setEditingState] = useState<Expense | null>(null)
+  // 非同期の処理の後で「今どれを編集中か」を確かめるための参照
+  const editingRef = useRef(editing)
+  useEffect(() => {
+    editingRef.current = editing
+  }, [editing])
   // 同じ支払いを編集し直すときもフォームを作り直すための番号
   const [editRev, setEditRev] = useState(0)
   const setEditing = (e: Expense | null) => {
@@ -421,9 +427,12 @@ export function TripPage({ tripId }: { tripId: string }) {
               defaultCategoryId={defaultCategoryId}
               onCreateCategory={(name) => store.addCategory(tripId, name)}
               readReceipt={readReceipt}
-              onSubmit={async (input) => {
+              getReceipt={editing ? () => store.getReceipt(tripId, editing.id) : undefined}
+              receiptLimitReached={data.expenses.filter((e) => e.hasReceipt).length >= MAX_RECEIPTS_PER_GROUP}
+              onSubmit={async (input, receipt) => {
                 if (editingChanged && !confirm('この支払いは他の人が更新しています。上書きして保存しますか？')) throw new Error('cancelled')
-                const p = editing ? store.updateExpense(tripId, editing.id, input) : store.addExpense(tripId, input)
+                const target = editing
+                const p = editing ? store.updateExpense(tripId, editing.id, input, receipt) : store.addExpense(tripId, input, receipt)
                 // 先に知らせる (受領を待った後だと、その間に出た「元に戻す」の通知を上書きしてしまう)
                 if (!editing) notify(`「${input.title}」を追加しました`)
                 if (navigator.onLine) {
@@ -438,8 +447,11 @@ export function TripPage({ tripId }: { tripId: string }) {
                   // 圏外では端末に即反映されるので待たずに閉じる (送信は電波が戻ってから)
                   run(p)
                 }
-                setEditing(null)
-                setSheet(false)
+                // 待っている間に別の支払いの編集を始めていたら閉じない
+                if (editingRef.current?.id === target?.id) {
+                  setEditing(null)
+                  setSheet(false)
+                }
               }}
               onCancel={
                 editing
@@ -498,7 +510,9 @@ export function TripPage({ tripId }: { tripId: string }) {
             // 写真も一緒に消えるため、元に戻せるよう先に読み込んでおく
             const receipt = e.hasReceipt ? await store.getReceipt(tripId, e.id).catch(() => null) : null
             run(store.deleteExpense(tripId, e.id))
-            notify(`「${e.title}」を削除しました`, { action: { label: '元に戻す', run: () => run(store.restoreExpense(tripId, e, receipt)) } })
+            notify(`「${e.title}」を削除しました`, {
+              action: { label: '元に戻す', run: () => run(store.restoreExpense(tripId, e, receipt)) },
+            })
           }}
         />
       </section>
