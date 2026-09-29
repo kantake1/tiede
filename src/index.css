@@ -58,6 +58,22 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ダブルタップ拡大の待ち時間をなくす */
+button,
+label,
+a,
+summary {
+  touch-action: manipulation;
+}
+
+/* 入力画面・引き出しを開いている間は背後をスクロールさせない */
+body:has(.layout.sheet-open),
+body:has(.layout.drawer-open) {
+  overflow: hidden;
 }
 
 .container {
@@ -582,6 +598,7 @@ label.button.disabled {
     'side form list';
   grid-template-rows: auto 1fr;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .apphead {
@@ -640,6 +657,7 @@ label.button.disabled {
   position: sticky;
   top: var(--head-h);
   height: calc(100vh - var(--head-h));
+  height: calc(100dvh - var(--head-h));
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -769,6 +787,7 @@ button.icon {
   position: sticky;
   top: calc(var(--head-h) + 16px);
   max-height: calc(100vh - var(--head-h) - 32px);
+  max-height: calc(100dvh - var(--head-h) - 32px);
   overflow-y: auto;
 }
 
@@ -827,6 +846,7 @@ body.resizing {
 dialog.settings {
   width: min(560px, calc(100vw - 32px));
   max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--bg);
@@ -858,6 +878,8 @@ dialog.settings::backdrop {
     position: fixed;
     inset: 0 auto 0 0;
     height: auto;
+    padding-top: calc(16px + env(safe-area-inset-top));
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
     width: min(280px, 85vw);
     z-index: 30;
     transform: translateX(-100%);
@@ -906,7 +928,7 @@ dialog.settings::backdrop {
     position: sticky;
     top: 0;
     z-index: 10;
-    padding: 8px 8px;
+    padding: calc(8px + env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) 8px max(8px, env(safe-area-inset-left));
     background: var(--card);
     border-bottom: 1px solid var(--border);
   }
@@ -925,6 +947,7 @@ dialog.settings::backdrop {
   .col-form > .card {
     top: 72px;
     max-height: calc(100vh - 88px);
+    max-height: calc(100dvh - 88px);
   }
 }
 
@@ -949,8 +972,9 @@ dialog.settings::backdrop {
     inset: 0;
     z-index: 25;
     overflow-y: auto;
+    overscroll-behavior: contain;
     background: var(--bg);
-    padding: 0 12px 24px;
+    padding: env(safe-area-inset-top) max(12px, env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
   }
 
   .layout.sheet-open .col-form > .card {
@@ -970,7 +994,7 @@ dialog.settings::backdrop {
   }
 
   .col-list {
-    padding: 0 12px 96px;
+    padding: 0 max(12px, env(safe-area-inset-right)) calc(96px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
   }
 
   .fab {
