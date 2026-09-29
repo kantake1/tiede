@@ -62,6 +62,7 @@ describe('friendlyError', () => {
     expect(friendlyError({ code: 'permission-denied', message: '' })).toMatch('拒否')
     expect(friendlyError(new Error('[429 ] You exceeded your current quota'))).toMatch('上限')
     expect(friendlyError(new Error('Firebase App Check token is invalid.'))).toMatch('認証')
+    expect(friendlyError(new Error('AI: Error fetching from https://x: [401 ] Firebase App Check token is invalid.'))).toMatch('認証')
     expect(friendlyError(new Error('その他'))).toBe('その他')
   })
 })
