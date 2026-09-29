@@ -22,6 +22,22 @@ function mutate(tripId: string, fn: (t: TripData) => void) {
   listeners.forEach((l) => l())
 }
 
+// レシート写真は容量が大きいため別のキーに保存する (端末の保存容量を超えたら例外)
+const RECEIPTS_KEY = 'tiede:local-receipts'
+const loadReceipts = (): Record<string, string> => {
+  try {
+    return JSON.parse(localStorage.getItem(RECEIPTS_KEY) ?? '{}')
+  } catch {
+    return {}
+  }
+}
+function setReceipt(tripId: string, expenseId: string, data: string | null) {
+  const all = loadReceipts()
+  if (data) all[`${tripId}/${expenseId}`] = data
+  else delete all[`${tripId}/${expenseId}`]
+  localStorage.setItem(RECEIPTS_KEY, JSON.stringify(all))
+}
+
 const newId = () => crypto.randomUUID().replaceAll('-', '').slice(0, 20)
 
 window.addEventListener('storage', (e) => {
@@ -90,19 +106,29 @@ export const localStore: TripStore = {
     mutate(tripId, (t) => t.categories.forEach((c) => c.id === categoryId && (c.archived = archived)))
   },
 
-  async addExpense(tripId, e) {
-    mutate(tripId, (t) => t.expenses.push({ ...e, id: newId(), createdAt: Date.now() }))
+  async addExpense(tripId, e, receipt) {
+    const id = newId()
+    if (receipt) setReceipt(tripId, id, receipt)
+    mutate(tripId, (t) => t.expenses.push({ ...e, id, hasReceipt: !!receipt, createdAt: Date.now() }))
   },
 
-  async updateExpense(tripId, expenseId, e) {
-    mutate(tripId, (t) => (t.expenses = t.expenses.map((x) => (x.id === expenseId ? { ...x, ...e } : x))))
+  async updateExpense(tripId, expenseId, e, receipt) {
+    if (receipt !== undefined) setReceipt(tripId, expenseId, receipt)
+    const extra = receipt === undefined ? {} : { hasReceipt: receipt !== null }
+    mutate(tripId, (t) => (t.expenses = t.expenses.map((x) => (x.id === expenseId ? { ...x, ...e, ...extra } : x))))
   },
 
   async deleteExpense(tripId, expenseId) {
+    setReceipt(tripId, expenseId, null)
     mutate(tripId, (t) => (t.expenses = t.expenses.filter((x) => x.id !== expenseId)))
   },
 
-  async restoreExpense(tripId, expense) {
-    mutate(tripId, (t) => (t.expenses = [...t.expenses.filter((x) => x.id !== expense.id), expense]))
+  async getReceipt(tripId, expenseId) {
+    return loadReceipts()[`${tripId}/${expenseId}`] ?? null
+  },
+
+  async restoreExpense(tripId, expense, receipt) {
+    if (receipt) setReceipt(tripId, expense.id, receipt)
+    mutate(tripId, (t) => (t.expenses = [...t.expenses.filter((x) => x.id !== expense.id), { ...expense, hasReceipt: !!receipt }]))
   },
 }

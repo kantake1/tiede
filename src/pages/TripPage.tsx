@@ -492,11 +492,13 @@ export function TripPage({ tripId }: { tripId: string }) {
             setSheet(true)
             document.querySelector('.col-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
           }}
-          onDelete={(e) => {
+          onDelete={async (e) => {
             // 確認ダイアログの代わりに、削除後しばらく「元に戻す」を出す
             if (editing?.id === e.id) setEditing(null)
+            // 写真も一緒に消えるため、元に戻せるよう先に読み込んでおく
+            const receipt = e.hasReceipt ? await store.getReceipt(tripId, e.id).catch(() => null) : null
             run(store.deleteExpense(tripId, e.id))
-            notify(`「${e.title}」を削除しました`, { action: { label: '元に戻す', run: () => run(store.restoreExpense(tripId, e)) } })
+            notify(`「${e.title}」を削除しました`, { action: { label: '元に戻す', run: () => run(store.restoreExpense(tripId, e, receipt)) } })
           }}
         />
       </section>

@@ -4,6 +4,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   initializeFirestore,
   onSnapshot,
   persistentLocalCache,
@@ -45,6 +46,7 @@ const db = initializeFirestore(app, { localCache: persistentLocalCache({ tabMana
 const trips = () => collection(db, 'trips')
 const members = (tripId: string) => collection(db, 'trips', tripId, 'members')
 const categories = (tripId: string) => collection(db, 'trips', tripId, 'categories')
+const receipts = (tripId: string) => collection(db, 'trips', tripId, 'receipts')
 const expenses = (tripId: string) => collection(db, 'trips', tripId, 'expenses')
 
 // 書き込み直後のローカルスナップショットでは serverTimestamp が null になるため現在時刻で補う
@@ -94,6 +96,7 @@ const toExpense = (id: string, d: DocumentData): Expense => ({
   categoryId: d.categoryId,
   memo: d.memo,
   date: d.date,
+  hasReceipt: d.hasReceipt === true,
   createdAt: millis(d.createdAt),
 })
 
@@ -200,15 +203,43 @@ export const firestoreStore: TripStore = {
 
   setCategoryArchived: (tripId, categoryId, archived) => write(updateDoc(doc(categories(tripId), categoryId), { archived })),
 
-  addExpense: (tripId, e) => write(setDoc(doc(expenses(tripId)), { ...e, createdAt: serverTimestamp() })),
+  addExpense(tripId, e, receipt) {
+    // 支払いと写真を1回の書き込みにまとめ、片方だけ保存されることを防ぐ
+    const ref = doc(expenses(tripId))
+    const batch = writeBatch(db)
+    batch.set(ref, { ...e, hasReceipt: !!receipt, createdAt: serverTimestamp() })
+    if (receipt) batch.set(doc(receipts(tripId), ref.id), { data: receipt, createdAt: serverTimestamp() })
+    return write(batch.commit())
+  },
 
-  updateExpense: (tripId, expenseId, e) => write(updateDoc(doc(expenses(tripId), expenseId), { ...e })),
+  updateExpense(tripId, expenseId, e, receipt) {
+    const batch = writeBatch(db)
+    const data: Record<string, unknown> = { ...e }
+    if (receipt !== undefined) data.hasReceipt = receipt !== null
+    batch.update(doc(expenses(tripId), expenseId), data)
+    if (receipt === null) batch.delete(doc(receipts(tripId), expenseId))
+    else if (receipt) batch.set(doc(receipts(tripId), expenseId), { data: receipt, createdAt: serverTimestamp() })
+    return write(batch.commit())
+  },
 
-  deleteExpense: (tripId, expenseId) => write(deleteDoc(doc(expenses(tripId), expenseId))),
+  deleteExpense(tripId, expenseId) {
+    const batch = writeBatch(db)
+    batch.delete(doc(expenses(tripId), expenseId))
+    batch.delete(doc(receipts(tripId), expenseId))
+    return write(batch.commit())
+  },
 
-  restoreExpense(tripId, { id, createdAt, ...rest }) {
+  async getReceipt(tripId, expenseId) {
+    const s = await getDoc(doc(receipts(tripId), expenseId))
+    return s.exists() ? (s.data().data as string) : null
+  },
+
+  restoreExpense(tripId, { id, createdAt, ...rest }, receipt) {
     // undefined のフィールドは Firestore が受け付けないため除く
     const data = Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== undefined))
-    return write(setDoc(doc(expenses(tripId), id), { ...data, createdAt: Timestamp.fromMillis(createdAt) }))
+    const batch = writeBatch(db)
+    batch.set(doc(expenses(tripId), id), { ...data, hasReceipt: !!receipt, createdAt: Timestamp.fromMillis(createdAt) })
+    if (receipt) batch.set(doc(receipts(tripId), id), { data: receipt, createdAt: serverTimestamp() })
+    return write(batch.commit())
   },
 }

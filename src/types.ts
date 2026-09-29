@@ -30,6 +30,8 @@ export type Expense = {
   memo?: string
   /** 支払った日 (YYYY-MM-DD, 端末のローカル日付)。古いデータには無い */
   date?: string
+  /** レシート写真を保存している (写真本体は receipts に別保存) */
+  hasReceipt?: boolean
   createdAt: number
 }
 
