@@ -198,7 +198,7 @@ export function TripPage({ tripId }: { tripId: string }) {
         isCurrent={isCurrent}
         onClose={closeEditor}
         defaultCategoryId={defaultCategoryId}
-        sidebarHandle={!layout.collapsedPref}
+        sidebarHandle={!layout.collapsed}
         setWidth={layout.setWidth}
         notify={notify}
         run={run}
