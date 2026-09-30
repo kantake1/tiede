@@ -1,5 +1,6 @@
 import { Camera, ReceiptText } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { friendlyError } from '../lib/errors'
 import { compressReceipt } from '../lib/receiptImage'
 import { loadFlag, saveFlag } from '../lib/storage'
@@ -26,7 +27,7 @@ const HINT_SAVED = 'tiede:hint-receipt-saved'
 
 /**
  * 支払い入力のレシート欄 (読み取り・写真の表示・再読み取りの確認)。
- * section は入力欄の中、dialogs は入力欄の外に置く。receiptNew は新しく読み取った写真 (undefined は未変更)
+ * section は入力欄の中に置く。dialogs は body 直下に描く (入力欄の sticky が重なり順を閉じ込め、列幅の取っ手が上に来るため)。receiptNew は新しく読み取った写真 (undefined は未変更)
  */
 export function useReceipt({ readReceipt, getReceipt, hasSaved, limitReached, onRead }: Options) {
   const [reading, setReading] = useState(false)
@@ -109,7 +110,7 @@ export function useReceipt({ readReceipt, getReceipt, hasSaved, limitReached, on
     </div>
   )
 
-  const dialogs = (
+  const dialogs = createPortal(
     <>
       {confirmReread && (
         <div className="modal-scrim" onClick={() => setConfirmReread(false)}>
@@ -140,7 +141,8 @@ export function useReceipt({ readReceipt, getReceipt, hasSaved, limitReached, on
         </div>
       )}
       {viewer.ui}
-    </>
+    </>,
+    document.body,
   )
 
   return { receiptNew, reset, section, dialogs }

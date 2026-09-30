@@ -15,6 +15,7 @@ import {
   Timestamp,
   updateDoc,
   writeBatch,
+  type CollectionReference,
   type DocumentData,
 } from 'firebase/firestore'
 import { WRITE_ERROR_EVENT } from '../lib/errors'
@@ -136,6 +137,18 @@ export const firestoreStore: TripStore = {
     }
     const err = (e: Error) => onError(e)
     const opts = { includeMetadataChanges: true }
+    // コレクションの購読: 変換して保存し、書き込み待ちを記録して emit
+    const listen = <T>(i: number, ref: CollectionReference, to: (id: string, d: DocumentData) => T, set: (v: T[]) => void) =>
+      onSnapshot(
+        ref,
+        opts,
+        (s) => {
+          pending[i] = s.metadata.hasPendingWrites
+          set(s.docs.map((d) => to(d.id, d.data())))
+          emit()
+        },
+        err,
+      )
     const unsubs = [
       onSnapshot(
         doc(trips(), tripId),
@@ -149,36 +162,9 @@ export const firestoreStore: TripStore = {
         },
         err,
       ),
-      onSnapshot(
-        members(tripId),
-        opts,
-        (s) => {
-          pending[1] = s.metadata.hasPendingWrites
-          ms = s.docs.map((d) => toMember(d.id, d.data()))
-          emit()
-        },
-        err,
-      ),
-      onSnapshot(
-        categories(tripId),
-        opts,
-        (s) => {
-          pending[2] = s.metadata.hasPendingWrites
-          cs = s.docs.map((d) => toCategory(d.id, d.data()))
-          emit()
-        },
-        err,
-      ),
-      onSnapshot(
-        expenses(tripId),
-        opts,
-        (s) => {
-          pending[3] = s.metadata.hasPendingWrites
-          es = s.docs.map((d) => toExpense(d.id, d.data()))
-          emit()
-        },
-        err,
-      ),
+      listen(1, members(tripId), toMember, (v) => (ms = v)),
+      listen(2, categories(tripId), toCategory, (v) => (cs = v)),
+      listen(3, expenses(tripId), toExpense, (v) => (es = v)),
     ]
     return () => unsubs.forEach((u) => u())
   },

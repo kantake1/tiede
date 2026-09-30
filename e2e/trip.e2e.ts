@@ -135,6 +135,26 @@ test('品目別: 全員の品目は名前を1回押すとその人だけにな�
   await expect(page.locator('.expense', { hasText: 'スーパー' })).toContainText('Aさん ¥1,400')
 })
 
+test('タブレット幅: 再度読み取るの確認をキャンセルできる', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 })
+  // 読み取り (Gemini) は外部へ出さずに失敗させる。写真は保存されるので「再度読み取る」が出る
+  await page.route(/^https?:\/\/(?!localhost|127\.0\.0\.1)/, (r) => r.abort())
+  await page.goto('/')
+  await page.getByPlaceholder('例: いつものメンバー').fill('レシート')
+  await page.locator('textarea').fill('Aさん\nBさん')
+  await page.locator('button[type="submit"]').click()
+  await page.waitForURL(/\/t\/.+/)
+
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    'base64',
+  )
+  await form(page).locator('.receipt input[type="file"]').setInputFiles({ name: 'r.png', mimeType: 'image/png', buffer: png })
+  await form(page).getByRole('button', { name: '再度読み取る' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'キャンセル' }).click()
+  await expect(page.getByRole('alertdialog')).toBeHidden()
+})
+
 test('広い画面: 格納を選んでいてもサイドバー幅の取っ手が出る', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('tiede:sidebar-collapsed', '1'))
   await page.setViewportSize({ width: 1440, height: 900 })
