@@ -83,6 +83,16 @@ export function buildExpense(d: Draft, memberIds: Set<string>): Built {
 }
 
 /**
+ * 品目の対象者の名前を押したとき。全員のときは「その人だけ」、一部のときはその人を足す・外す。
+ * 誰もいなくなったら全員に戻す (対象者0人のエラーにしない)
+ */
+export function pickItemMember(memberIds: string[], id: string, allIds: string[]): string[] {
+  if (allIds.every((x) => memberIds.includes(x))) return [id]
+  const next = memberIds.includes(id) ? memberIds.filter((x) => x !== id) : [...memberIds, id]
+  return next.length ? next : allIds
+}
+
+/**
  * 金額指定で、金額から入力済みの額を引いた残りを空欄の人で均等に割る (空欄が無ければ対象者全員で割り直す)。
  * 割り切れない分は先頭の人から1円ずつ。割れないときは null
  */

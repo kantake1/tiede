@@ -99,3 +99,38 @@ test('旅行の立て替えを記録して精算する', async ({ page, browser 
   await expect(page.locator('.expense')).toHaveCount(3)
   await expect(allTotal(page)).toContainText('43,500')
 })
+
+test('品目別: 全員の品目は名前を1回押すとその人だけになる', async ({ page }) => {
+  await page.goto('/')
+  await page.getByPlaceholder('例: いつものメンバー').fill('買い出し')
+  await page.locator('textarea').fill('Aさん\nBさん\nCさん')
+  await page.locator('button[type="submit"]').click()
+  await page.waitForURL(/\/t\/.+/)
+
+  const f = form(page)
+  await f.getByPlaceholder('例: 食事代').fill('スーパー')
+  await f.getByPlaceholder('12000').fill('3000')
+  await f.getByRole('radio', { name: '品目', exact: true }).click()
+  for (const [i, [name, price]] of [['弁当', 600], ['お茶', 2400]].entries()) {
+    await f.getByRole('button', { name: '品目を追加' }).click()
+    await f.getByLabel(`${i + 1}行目の品名`).fill(String(name))
+    await f.getByLabel(`${i + 1}行目の金額`).fill(String(price))
+  }
+
+  const bento = f.locator('.items > li').first()
+  await expect(bento.getByRole('button', { name: '全員' })).toHaveAttribute('aria-pressed', 'true')
+  await bento.getByRole('button', { name: 'Aさんだけ' }).click()
+  await expect(bento.getByRole('button', { name: '全員' })).toHaveAttribute('aria-pressed', 'false')
+  await expect(bento.getByRole('button', { name: 'Aさん', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  // A: 600 + 800、B・C: 800
+  await expect(f.locator('.participants li', { hasText: 'Aさん' })).toContainText('1,400')
+  await expect(f.locator('.participants li', { hasText: 'Bさん' })).toContainText('800')
+
+  // 最後の1人を外すと全員に戻る
+  await bento.getByRole('button', { name: 'Aさん', exact: true }).click()
+  await expect(bento.getByRole('button', { name: '全員' })).toHaveAttribute('aria-pressed', 'true')
+  await bento.getByRole('button', { name: 'Aさんだけ' }).click()
+
+  await f.getByRole('button', { name: '追加', exact: true }).click()
+  await expect(page.locator('.expense', { hasText: 'スーパー' })).toContainText('Aさん ¥1,400')
+})
