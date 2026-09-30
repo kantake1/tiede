@@ -13,6 +13,7 @@ import { friendlyError, WRITE_ERROR_EVENT } from '../lib/errors'
 import { askName } from '../lib/names'
 import { MAX_RECEIPTS_PER_GROUP } from '../lib/receiptImage'
 import { touchRecent } from '../lib/recent'
+import { isMemberReferenced, tripView } from '../lib/tripView'
 import { loadFlag, loadJson, saveFlag, saveJson } from '../lib/storage'
 import { getStore, isFirebaseConfigured, type TripStore } from '../store'
 import type { Expense, TripData } from '../types'
@@ -149,9 +150,6 @@ export function TripPage({ tripId }: { tripId: string }) {
     return (id: string | undefined) => (id ? map.get(id) : undefined)
   }, [data])
 
-  // 削除済みイベントを指す支払いは未分類扱い
-  const catKey = (e: Expense) => (categoryOf(e.categoryId) ? e.categoryId! : '')
-
   const status = (node: React.ReactNode) => (
     <div className="container">
       <header className="app-header">
@@ -178,10 +176,7 @@ export function TripPage({ tripId }: { tripId: string }) {
     )
   if (data === null) return status(<p className="error">グループが見つかりません。URLを確認してください。</p>)
 
-  // 精算済みイベントは「すべて」から除く。個別に選べば閲覧できる
-  const archivedIds = new Set(data.categories.filter((c) => c.archived).map((c) => c.id))
-  const active = data.expenses.filter((e) => !archivedIds.has(catKey(e)))
-  const visible = filter.length ? data.expenses.filter((e) => filter.includes(catKey(e))) : active
+  const { visible, total, rows, archivedRows, selected, defaultCategoryId, filterLabel, selectedActive, bulk } = tripView(data, filter)
 
   const run = (p: Promise<unknown>) => p.catch((e) => notify(`保存できませんでした: ${friendlyError(e)}`, { tone: 'error' }))
 
@@ -236,28 +231,6 @@ export function TripPage({ tripId }: { tripId: string }) {
     if (name) await run(store!.addCategory(tripId, name))
   }
 
-  const withTotal = (r: { key: string; name: string }) => ({
-    ...r,
-    total: data.expenses.filter((e) => catKey(e) === r.key).reduce((s, e) => s + e.amount, 0),
-  })
-  const rows = [
-    ...data.categories.filter((c) => !c.archived).map((c) => ({ key: c.id, name: c.name })),
-    ...(data.expenses.some((e) => catKey(e) === '') ? [{ key: '', name: '未分類' }] : []),
-  ].map(withTotal)
-  const archivedRows = data.categories.filter((c) => c.archived).map((c) => withTotal({ key: c.id, name: c.name }))
-  const selected = filter.length === 1 ? data.categories.find((c) => c.id === filter[0]) : undefined
-  const defaultCategoryId = selected && !selected.archived ? selected.id : ''
-  const filterLabel = filter.length
-    ? [...rows, ...archivedRows]
-        .filter((r) => filter.includes(r.key))
-        .map((r) => r.name)
-        .join('・')
-    : 'すべて'
-
-  // 複数のイベントを選んでいるときは、未精算のものをまとめて精算済みにできる (未分類・アーカイブ済みは除く)
-  const selectedActive = data.categories.filter((c) => filter.includes(c.id) && !c.archived)
-  const bulk = filter.length >= 2 && selectedActive.length > 0
-
   function archiveMany() {
     const names = selectedActive.map((c) => `「${c.name}」`).join('')
     if (!confirm(`${names}をまとめて精算済みにしてアーカイブに移しますか？`)) return
@@ -309,7 +282,7 @@ export function TripPage({ tripId }: { tripId: string }) {
         tripName={data.trip.name}
         rows={rows}
         archived={archivedRows}
-        total={active.reduce((s, e) => s + e.amount, 0)}
+        total={total}
         filter={filter}
         onFilter={setFilter}
         onAddCategory={addCategory}
@@ -532,9 +505,7 @@ export function TripPage({ tripId }: { tripId: string }) {
           title={`メンバー (${data.members.length}人)`}
           entries={data.members}
           placeholder="メンバーを追加"
-          isReferenced={(id) =>
-            data.expenses.some((e) => e.payerId === id || (e.shares[id] ?? 0) > 0 || e.items?.some((it) => it.memberIds.includes(id)))
-          }
+          isReferenced={(id) => isMemberReferenced(data.expenses, id)}
           onAdd={(name) => run(store.addMember(tripId, name))}
           onRename={(id, name) => run(store.renameMember(tripId, id, name))}
           onRemove={(id) => run(store.removeMember(tripId, id))}
