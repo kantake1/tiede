@@ -7,6 +7,7 @@ import { compressReceipt } from '../lib/receiptImage'
 import { ReceiptViewer } from './ReceiptViewer'
 import { parseNumber, yen } from '../lib/format'
 import { computeOwed } from '../lib/split'
+import { loadFlag, saveFlag } from '../lib/storage'
 import type { Category, Expense, ExpenseInput, Item, Member, SplitMode } from '../types'
 
 type Props = {
@@ -41,20 +42,6 @@ const MAX_AMOUNT = 100_000_000
 // 説明文は端末ごとに初回だけ表示する
 const HINT_READ = 'tiede:hint-receipt-read'
 const HINT_SAVED = 'tiede:hint-receipt-saved'
-const seen = (key: string) => {
-  try {
-    return localStorage.getItem(key) === '1'
-  } catch {
-    return false
-  }
-}
-const markSeen = (key: string) => {
-  try {
-    localStorage.setItem(key, '1')
-  } catch {
-    // 保存できなくても動作に影響しない
-  }
-}
 
 export function ExpenseForm({
   members,
@@ -102,13 +89,13 @@ export function ExpenseForm({
   const [viewer, setViewer] = useState<{ src: string | null } | null>(null)
   const [confirmReread, setConfirmReread] = useState(false)
   // 一度表示した説明文は、同じ入力欄に戻っても再び出さない
-  const [hintRead, setHintRead] = useState(() => !seen(HINT_READ))
-  const [hintSaved, setHintSaved] = useState(() => !seen(HINT_SAVED))
+  const [hintRead, setHintRead] = useState(() => !loadFlag(HINT_READ))
+  const [hintSaved, setHintSaved] = useState(() => !loadFlag(HINT_SAVED))
   const showReadHint = hintRead && !hasPhoto
   const showSavedHint = hintSaved && hasPhoto
   useEffect(() => {
-    if (showReadHint) markSeen(HINT_READ)
-    if (showSavedHint) markSeen(HINT_SAVED)
+    if (showReadHint) saveFlag(HINT_READ, true)
+    if (showSavedHint) saveFlag(HINT_SAVED, true)
   }, [showReadHint, showSavedHint])
 
   // フォーム表示後に追加されたメンバーは、新規入力なら対象に含める

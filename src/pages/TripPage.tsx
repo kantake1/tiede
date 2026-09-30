@@ -13,31 +13,18 @@ import { friendlyError, WRITE_ERROR_EVENT } from '../lib/errors'
 import { askName } from '../lib/names'
 import { MAX_RECEIPTS_PER_GROUP } from '../lib/receiptImage'
 import { touchRecent } from '../lib/recent'
+import { loadFlag, loadJson, saveFlag, saveJson } from '../lib/storage'
 import { getStore, isFirebaseConfigured, type TripStore } from '../store'
 import type { Expense, TripData } from '../types'
 import { Logo } from '../components/Logo'
 
 const COLLAPSED_KEY = 'tiede:sidebar-collapsed'
-const loadCollapsed = () => {
-  try {
-    return localStorage.getItem(COLLAPSED_KEY) === '1'
-  } catch {
-    return false
-  }
-}
 
 const WIDE_QUERY = '(min-width: 1440px)'
 
 // 列幅 (px)。未設定なら CSS の既定値
 type Widths = { sb?: number; form?: number }
 const WIDTHS_KEY = 'tiede:layout-widths'
-const loadWidths = (): Widths => {
-  try {
-    return JSON.parse(localStorage.getItem(WIDTHS_KEY) ?? '{}')
-  } catch {
-    return {}
-  }
-}
 
 const readReceipt = isFirebaseConfigured ? (file: File) => import('../lib/receipt').then((m) => m.readReceipt(file)) : undefined
 
@@ -61,7 +48,7 @@ export function TripPage({ tripId }: { tripId: string }) {
   // 精算・一覧に含めるイベント。空なら全部。'' は未分類
   const [filter, setFilter] = useState<string[]>([])
   // デスクトップでの格納状態 (端末に保存) / タブレット・スマホでの引き出し / スマホでの入力画面
-  const [collapsed, setCollapsed] = useState(loadCollapsed)
+  const [collapsed, setCollapsed] = useState(() => loadFlag(COLLAPSED_KEY))
   const [drawer, setDrawer] = useState(false)
   // 十分な幅 (1440px 以上) では格納する必要がないため、常に展開する
   const [wide, setWide] = useState(() => matchMedia(WIDE_QUERY).matches)
@@ -76,7 +63,7 @@ export function TripPage({ tripId }: { tripId: string }) {
   const [askConfirm, confirmUi] = useConfirm()
   // 一覧から開いたレシート写真 (src が null の間は読み込み中)
   const [receiptView, setReceiptView] = useState<{ src: string | null } | null>(null)
-  const [widths, setWidths] = useState<Widths>(loadWidths)
+  const [widths, setWidths] = useState(() => loadJson<Widths>(WIDTHS_KEY, {}))
   const [toast, setToast] = useState<ToastMessage | null>(null)
   const [online, setOnline] = useState(() => navigator.onLine)
   const [slow, setSlow] = useState(false)
@@ -119,13 +106,7 @@ export function TripPage({ tripId }: { tripId: string }) {
     return () => clearTimeout(t)
   }, [tripId])
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(WIDTHS_KEY, JSON.stringify(widths))
-    } catch {
-      // 保存できなくても動作に影響しない
-    }
-  }, [widths])
+  useEffect(() => saveJson(WIDTHS_KEY, widths), [widths])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -247,11 +228,7 @@ export function TripPage({ tripId }: { tripId: string }) {
   function toggleCollapsed() {
     const next = !collapsed
     setCollapsed(next)
-    try {
-      localStorage.setItem(COLLAPSED_KEY, next ? '1' : '0')
-    } catch {
-      // 保存できなくても動作に影響しない
-    }
+    saveFlag(COLLAPSED_KEY, next)
   }
 
   async function addCategory() {

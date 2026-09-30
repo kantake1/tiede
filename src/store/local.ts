@@ -1,3 +1,4 @@
+import { loadJson } from '../lib/storage'
 import type { TripData } from '../types'
 import type { TripStore } from './types'
 
@@ -5,13 +6,7 @@ import type { TripStore } from './types'
 const KEY = 'tiede:local-trips'
 const listeners = new Set<() => void>()
 
-function load(): Record<string, TripData> {
-  try {
-    return JSON.parse(localStorage.getItem(KEY) ?? '{}')
-  } catch {
-    return {}
-  }
-}
+const load = () => loadJson<Record<string, TripData>>(KEY, {})
 
 function mutate(tripId: string, fn: (t: TripData) => void) {
   const all = load()
@@ -24,13 +19,7 @@ function mutate(tripId: string, fn: (t: TripData) => void) {
 
 // レシート写真は容量が大きいため別のキーに保存する (端末の保存容量を超えたら例外)
 const RECEIPTS_KEY = 'tiede:local-receipts'
-const loadReceipts = (): Record<string, string> => {
-  try {
-    return JSON.parse(localStorage.getItem(RECEIPTS_KEY) ?? '{}')
-  } catch {
-    return {}
-  }
-}
+const loadReceipts = () => loadJson<Record<string, string>>(RECEIPTS_KEY, {})
 function setReceipt(tripId: string, expenseId: string, data: string | null) {
   const all = loadReceipts()
   if (data) all[`${tripId}/${expenseId}`] = data
