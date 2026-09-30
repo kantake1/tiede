@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { dateOf, formatDate, groupByDate, toDateKey } from './date'
 import { friendlyError } from './errors'
 import { parseNumber, yen } from './format'
 import { settlementText } from './shareText'
+import { loadFlag, loadJson, saveFlag, saveJson } from './storage'
 
 describe('date', () => {
   it('ローカル日付のキーを作る', () => {
@@ -64,5 +65,39 @@ describe('friendlyError', () => {
     expect(friendlyError(new Error('Firebase App Check token is invalid.'))).toMatch('認証')
     expect(friendlyError(new Error('AI: Error fetching from https://x: [401 ] Firebase App Check token is invalid.'))).toMatch('認証')
     expect(friendlyError(new Error('その他'))).toBe('その他')
+  })
+})
+
+describe('storage', () => {
+  afterEach(() => vi.unstubAllGlobals())
+  const memory = () => {
+    const m = new Map<string, string>()
+    return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v) }
+  }
+
+  it('保存した値を読み、無い・壊れている場合は既定値', () => {
+    const ls = memory()
+    vi.stubGlobal('localStorage', ls)
+    expect(loadJson('k', { a: 0 })).toEqual({ a: 0 })
+    saveJson('k', { a: 1 })
+    expect(loadJson('k', {})).toEqual({ a: 1 })
+    ls.setItem('k', '{broken')
+    expect(loadJson('k', [])).toEqual([])
+    saveFlag('f', true)
+    expect(ls.getItem('f')).toBe('1')
+    expect(loadFlag('f')).toBe(true)
+    saveFlag('f', false)
+    expect(loadFlag('f')).toBe(false)
+  })
+
+  it('使えない端末でも例外を出さない', () => {
+    const fail = () => {
+      throw new Error('SecurityError')
+    }
+    vi.stubGlobal('localStorage', { getItem: fail, setItem: fail })
+    expect(loadJson('k', 1)).toBe(1)
+    expect(loadFlag('f')).toBe(false)
+    expect(() => saveJson('k', 1)).not.toThrow()
+    expect(() => saveFlag('f', true)).not.toThrow()
   })
 })

@@ -13,31 +13,19 @@ import { friendlyError, WRITE_ERROR_EVENT } from '../lib/errors'
 import { askName } from '../lib/names'
 import { MAX_RECEIPTS_PER_GROUP } from '../lib/receiptImage'
 import { touchRecent } from '../lib/recent'
+import { isMemberReferenced, tripView } from '../lib/tripView'
+import { loadFlag, loadJson, saveFlag, saveJson } from '../lib/storage'
 import { getStore, isFirebaseConfigured, type TripStore } from '../store'
 import type { Expense, TripData } from '../types'
 import { Logo } from '../components/Logo'
 
 const COLLAPSED_KEY = 'tiede:sidebar-collapsed'
-const loadCollapsed = () => {
-  try {
-    return localStorage.getItem(COLLAPSED_KEY) === '1'
-  } catch {
-    return false
-  }
-}
 
 const WIDE_QUERY = '(min-width: 1440px)'
 
 // 列幅 (px)。未設定なら CSS の既定値
 type Widths = { sb?: number; form?: number }
 const WIDTHS_KEY = 'tiede:layout-widths'
-const loadWidths = (): Widths => {
-  try {
-    return JSON.parse(localStorage.getItem(WIDTHS_KEY) ?? '{}')
-  } catch {
-    return {}
-  }
-}
 
 const readReceipt = isFirebaseConfigured ? (file: File) => import('../lib/receipt').then((m) => m.readReceipt(file)) : undefined
 
@@ -61,7 +49,7 @@ export function TripPage({ tripId }: { tripId: string }) {
   // 精算・一覧に含めるイベント。空なら全部。'' は未分類
   const [filter, setFilter] = useState<string[]>([])
   // デスクトップでの格納状態 (端末に保存) / タブレット・スマホでの引き出し / スマホでの入力画面
-  const [collapsed, setCollapsed] = useState(loadCollapsed)
+  const [collapsed, setCollapsed] = useState(() => loadFlag(COLLAPSED_KEY))
   const [drawer, setDrawer] = useState(false)
   // 十分な幅 (1440px 以上) では格納する必要がないため、常に展開する
   const [wide, setWide] = useState(() => matchMedia(WIDE_QUERY).matches)
@@ -76,7 +64,7 @@ export function TripPage({ tripId }: { tripId: string }) {
   const [askConfirm, confirmUi] = useConfirm()
   // 一覧から開いたレシート写真 (src が null の間は読み込み中)
   const [receiptView, setReceiptView] = useState<{ src: string | null } | null>(null)
-  const [widths, setWidths] = useState<Widths>(loadWidths)
+  const [widths, setWidths] = useState(() => loadJson<Widths>(WIDTHS_KEY, {}))
   const [toast, setToast] = useState<ToastMessage | null>(null)
   const [online, setOnline] = useState(() => navigator.onLine)
   const [slow, setSlow] = useState(false)
@@ -119,13 +107,7 @@ export function TripPage({ tripId }: { tripId: string }) {
     return () => clearTimeout(t)
   }, [tripId])
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(WIDTHS_KEY, JSON.stringify(widths))
-    } catch {
-      // 保存できなくても動作に影響しない
-    }
-  }, [widths])
+  useEffect(() => saveJson(WIDTHS_KEY, widths), [widths])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -168,9 +150,6 @@ export function TripPage({ tripId }: { tripId: string }) {
     return (id: string | undefined) => (id ? map.get(id) : undefined)
   }, [data])
 
-  // 削除済みイベントを指す支払いは未分類扱い
-  const catKey = (e: Expense) => (categoryOf(e.categoryId) ? e.categoryId! : '')
-
   const status = (node: React.ReactNode) => (
     <div className="container">
       <header className="app-header">
@@ -197,10 +176,7 @@ export function TripPage({ tripId }: { tripId: string }) {
     )
   if (data === null) return status(<p className="error">グループが見つかりません。URLを確認してください。</p>)
 
-  // 精算済みイベントは「すべて」から除く。個別に選べば閲覧できる
-  const archivedIds = new Set(data.categories.filter((c) => c.archived).map((c) => c.id))
-  const active = data.expenses.filter((e) => !archivedIds.has(catKey(e)))
-  const visible = filter.length ? data.expenses.filter((e) => filter.includes(catKey(e))) : active
+  const { visible, total, rows, archivedRows, selected, defaultCategoryId, filterLabel, selectedActive, bulk } = tripView(data, filter)
 
   const run = (p: Promise<unknown>) => p.catch((e) => notify(`保存できませんでした: ${friendlyError(e)}`, { tone: 'error' }))
 
@@ -247,39 +223,13 @@ export function TripPage({ tripId }: { tripId: string }) {
   function toggleCollapsed() {
     const next = !collapsed
     setCollapsed(next)
-    try {
-      localStorage.setItem(COLLAPSED_KEY, next ? '1' : '0')
-    } catch {
-      // 保存できなくても動作に影響しない
-    }
+    saveFlag(COLLAPSED_KEY, next)
   }
 
   async function addCategory() {
     const name = askName('新しいイベント名 (例: 沖縄旅行、3月の飲み会)', 50, { existing: data!.categories.map((c) => c.name) })
     if (name) await run(store!.addCategory(tripId, name))
   }
-
-  const withTotal = (r: { key: string; name: string }) => ({
-    ...r,
-    total: data.expenses.filter((e) => catKey(e) === r.key).reduce((s, e) => s + e.amount, 0),
-  })
-  const rows = [
-    ...data.categories.filter((c) => !c.archived).map((c) => ({ key: c.id, name: c.name })),
-    ...(data.expenses.some((e) => catKey(e) === '') ? [{ key: '', name: '未分類' }] : []),
-  ].map(withTotal)
-  const archivedRows = data.categories.filter((c) => c.archived).map((c) => withTotal({ key: c.id, name: c.name }))
-  const selected = filter.length === 1 ? data.categories.find((c) => c.id === filter[0]) : undefined
-  const defaultCategoryId = selected && !selected.archived ? selected.id : ''
-  const filterLabel = filter.length
-    ? [...rows, ...archivedRows]
-        .filter((r) => filter.includes(r.key))
-        .map((r) => r.name)
-        .join('・')
-    : 'すべて'
-
-  // 複数のイベントを選んでいるときは、未精算のものをまとめて精算済みにできる (未分類・アーカイブ済みは除く)
-  const selectedActive = data.categories.filter((c) => filter.includes(c.id) && !c.archived)
-  const bulk = filter.length >= 2 && selectedActive.length > 0
 
   function archiveMany() {
     const names = selectedActive.map((c) => `「${c.name}」`).join('')
@@ -332,7 +282,7 @@ export function TripPage({ tripId }: { tripId: string }) {
         tripName={data.trip.name}
         rows={rows}
         archived={archivedRows}
-        total={active.reduce((s, e) => s + e.amount, 0)}
+        total={total}
         filter={filter}
         onFilter={setFilter}
         onAddCategory={addCategory}
@@ -555,9 +505,7 @@ export function TripPage({ tripId }: { tripId: string }) {
           title={`メンバー (${data.members.length}人)`}
           entries={data.members}
           placeholder="メンバーを追加"
-          isReferenced={(id) =>
-            data.expenses.some((e) => e.payerId === id || (e.shares[id] ?? 0) > 0 || e.items?.some((it) => it.memberIds.includes(id)))
-          }
+          isReferenced={(id) => isMemberReferenced(data.expenses, id)}
           onAdd={(name) => run(store.addMember(tripId, name))}
           onRename={(id, name) => run(store.renameMember(tripId, id, name))}
           onRemove={(id) => run(store.removeMember(tripId, id))}
