@@ -5,10 +5,11 @@ import { friendlyError } from '../lib/errors'
 import { askName } from '../lib/names'
 import { compressReceipt } from '../lib/receiptImage'
 import { ReceiptViewer } from './ReceiptViewer'
-import { parseNumber, yen } from '../lib/format'
+import { buildExpense, fillRemainder as fillRemainderOf, type ItemDraft } from '../lib/expenseDraft'
+import { yen } from '../lib/format'
 import { computeOwed } from '../lib/split'
 import { loadFlag, saveFlag } from '../lib/storage'
-import type { Category, Expense, ExpenseInput, Item, Member, SplitMode } from '../types'
+import type { Category, Expense, ExpenseInput, Member, SplitMode } from '../types'
 
 type Props = {
   members: Member[]
@@ -27,8 +28,6 @@ type Props = {
   onCancel?: () => void
 }
 
-type ItemDraft = { name: string; priceText: string; memberIds: string[] }
-
 const MODES: { value: SplitMode; label: string }[] = [
   { value: 'equal', label: '均等' },
   { value: 'ratio', label: '比率' },
@@ -37,7 +36,6 @@ const MODES: { value: SplitMode; label: string }[] = [
 ]
 
 const NEW_CATEGORY = '__new__'
-const MAX_AMOUNT = 100_000_000
 
 // 説明文は端末ごとに初回だけ表示する
 const HINT_READ = 'tiede:hint-receipt-read'
@@ -102,69 +100,18 @@ export function ExpenseForm({
   const isIn = (id: string) => included[id] ?? !initial
   const val = (id: string) => values[id] ?? ''
 
-  const amount = parseNumber(amountText)
   const targets = members.filter((m) => isIn(m.id))
   const memberIdSet = new Set(members.map((m) => m.id))
   // 選んでいた人が他の端末で削除されたら先頭のメンバーに切り替える (表示と中身のずれを防ぐ)
   const payerId = memberIdSet.has(payerChoice) ? payerChoice : (members[0]?.id ?? '')
 
-  // shares / items を組み立てつつ入力エラーを検出する
-  const shares: Record<string, number> = {}
-  const parsedItems: Item[] = []
-  let error = ''
-  if (!title.trim()) error = '内容を入力してください'
-  else if (!Number.isInteger(amount) || amount <= 0) error = '金額は1円以上の整数で入力してください'
-  else if (amount > MAX_AMOUNT) error = '金額は1億円までにしてください'
-  else if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) error = '日付を入力してください'
-  else if (!memberIdSet.has(payerId)) error = '立て替えた人を選んでください'
-  else if (mode === 'items') {
-    if (items.length === 0) error = '品目を1つ以上追加してください'
-    for (const [i, it] of items.entries()) {
-      if (error) break
-      const price = parseNumber(it.priceText.trim().replace(/^[-−ー]/, ''))
-      const sign = /^[-−ー]/.test(it.priceText.trim()) ? -1 : 1
-      const memberIds = it.memberIds.filter((id) => memberIdSet.has(id))
-      if (!it.name.trim()) error = `${i + 1}行目の品名を入力してください`
-      else if (!Number.isInteger(price)) error = `「${it.name}」の金額が正しくありません`
-      else if (memberIds.length === 0) error = `「${it.name}」の対象者を選んでください`
-      else parsedItems.push({ name: it.name.trim(), price: sign * price, memberIds })
-    }
-    if (!error && parsedItems.reduce((s, it) => s + it.price, 0) <= 0) error = '品目の合計が0円以下です'
-  } else if (targets.length === 0) error = '対象者を1人以上選んでください'
-  else {
-    for (const m of targets) {
-      if (mode === 'equal') shares[m.id] = 1
-      else {
-        const raw = val(m.id).trim()
-        const v = raw === '' ? (mode === 'ratio' ? 1 : NaN) : parseNumber(raw)
-        if (Number.isNaN(v) || v < 0 || (mode === 'amount' && !Number.isInteger(v))) {
-          error = `${m.name} の${mode === 'ratio' ? '比率' : '金額'}が正しくありません`
-          break
-        }
-        if (v > 0) shares[m.id] = v
-      }
-    }
-    if (!error && Object.keys(shares).length === 0) error = '負担する人がいません'
-  }
-
-  const assigned = mode === 'amount' ? targets.reduce((s, m) => s + (parseNumber(val(m.id)) || 0), 0) : 0
-  if (!error && mode === 'amount' && assigned !== amount) {
-    error = `指定額の合計 ${yen(assigned)} が金額 ${yen(amount)} と一致しません (${assigned < amount ? '残り' : '超過'} ${yen(Math.abs(amount - assigned))})`
-  }
-
-  const itemsTotal = parsedItems.reduce((s, it) => s + it.price, 0)
+  const built = buildExpense({ title, amountText, payerId, date, mode, targets, values, items }, memberIdSet)
+  const { error, amount, shares, items: parsedItems, itemsTotal, assigned } = built
   const preview = error ? null : computeOwed({ amount, payerId, mode, shares, items: parsedItems })
 
   function fillRemainder() {
-    const blanks = targets.filter((m) => val(m.id).trim() === '')
-    const pool = blanks.length ? blanks : targets
-    const fixed = targets.filter((m) => !pool.includes(m)).reduce((s, m) => s + (parseNumber(val(m.id)) || 0), 0)
-    const rest = amount - fixed
-    if (!Number.isInteger(amount) || rest < 0 || pool.length === 0) return
-    const each = Math.floor(rest / pool.length)
-    const next = { ...values }
-    pool.forEach((m, i) => (next[m.id] = String(each + (i < rest - each * pool.length ? 1 : 0))))
-    setValues(next)
+    const next = fillRemainderOf(amount, targets.map((m) => m.id), values)
+    if (next) setValues(next)
   }
 
   const allIds = () => members.map((m) => m.id)
