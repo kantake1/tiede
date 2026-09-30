@@ -1,6 +1,7 @@
 // tiede の Service Worker。画面 (HTML/JS/CSS/画像) を端末に保存し、圏外でも起動できるようにする。
 // データ (Firestore) は Firebase SDK が IndexedDB に保持するので、ここでは扱わない。
-const CACHE = 'oaiko-v6'
+// 末尾はビルド時にビルド内容のハッシュへ置き換わる (vite.config.ts)
+const CACHE = 'oaiko-__BUILD__'
 
 // 初回訪問ではページの読み込みが SW の起動より先に終わり、JS/CSS が保存されない。
 // ページから読み込み済みファイルの一覧を受け取って保存し、次回から圏外でも起動できるようにする
