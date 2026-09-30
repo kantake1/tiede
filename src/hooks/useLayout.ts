@@ -45,8 +45,6 @@ export function useLayout() {
 
   const collapsed = collapsedPref && !wide
   return {
-    /** 格納を選んでいる (幅の広い画面では無視される) */
-    collapsedPref,
     collapsed,
     toggleCollapsed,
     drawer,

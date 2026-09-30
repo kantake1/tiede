@@ -154,3 +154,14 @@ test('タブレット幅: 再度読み取るの確認をキャンセルできる
   await page.getByRole('alertdialog').getByRole('button', { name: 'キャンセル' }).click()
   await expect(page.getByRole('alertdialog')).toBeHidden()
 })
+
+test('広い画面: 格納を選んでいてもサイドバー幅の取っ手が出る', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('tiede:sidebar-collapsed', '1'))
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/')
+  await page.getByPlaceholder('例: いつものメンバー').fill('取っ手')
+  await page.locator('textarea').fill('Aさん\nBさん')
+  await page.locator('button[type="submit"]').click()
+  await page.waitForURL(/\/t\/.+/)
+  await expect(page.getByRole('separator', { name: /サイドバーの幅/ })).toBeAttached()
+})
