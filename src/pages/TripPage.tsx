@@ -1,144 +1,35 @@
-import { Archive, ArchiveRestore, Check, Link2, Menu, Plus, X } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ExpenseForm } from '../components/ExpenseForm'
+import { Archive, ArchiveRestore, Check, Link2, Menu, Plus } from 'lucide-react'
+import { useMemo, useRef, useState } from 'react'
+import { useConfirm } from '../components/ConfirmDialog'
+import { EditorPanel } from '../components/EditorPanel'
 import { ExpenseList } from '../components/ExpenseList'
-import { NamesPanel } from '../components/NamesPanel'
-import { ResizeHandle } from '../components/ResizeHandle'
+import { Logo } from '../components/Logo'
+import { SettingsDialog } from '../components/SettingsDialog'
 import { SettlementPanel } from '../components/SettlementPanel'
 import { Sidebar } from '../components/Sidebar'
-import { Toast, type ToastMessage } from '../components/Toast'
-import { useConfirm } from '../components/ConfirmDialog'
-import { ReceiptViewer } from '../components/ReceiptViewer'
-import { friendlyError, WRITE_ERROR_EVENT } from '../lib/errors'
+import { Toast } from '../components/Toast'
+import { useReceiptViewer } from '../components/useReceiptViewer'
+import { useEditing } from '../hooks/useEditing'
+import { useLayout } from '../hooks/useLayout'
+import { useToast } from '../hooks/useToast'
+import { useTripData } from '../hooks/useTripData'
+import { friendlyError } from '../lib/errors'
 import { askName } from '../lib/names'
-import { MAX_RECEIPTS_PER_GROUP } from '../lib/receiptImage'
-import { touchRecent } from '../lib/recent'
-import { isMemberReferenced, tripView } from '../lib/tripView'
-import { loadFlag, loadJson, saveFlag, saveJson } from '../lib/storage'
-import { getStore, isFirebaseConfigured, type TripStore } from '../store'
-import type { Expense, TripData } from '../types'
-import { Logo } from '../components/Logo'
-
-const COLLAPSED_KEY = 'tiede:sidebar-collapsed'
-
-const WIDE_QUERY = '(min-width: 1440px)'
-
-// 列幅 (px)。未設定なら CSS の既定値
-type Widths = { sb?: number; form?: number }
-const WIDTHS_KEY = 'tiede:layout-widths'
-
-const readReceipt = isFirebaseConfigured ? (file: File) => import('../lib/receipt').then((m) => m.readReceipt(file)) : undefined
+import { tripView } from '../lib/tripView'
 
 export function TripPage({ tripId }: { tripId: string }) {
-  const [store, setStore] = useState<TripStore>()
-  const [data, setData] = useState<TripData | null>()
-  const [error, setError] = useState('')
-  const [editing, setEditingState] = useState<Expense | null>(null)
-  // 非同期の処理の後で「今どれを編集中か」を確かめるための参照
-  const editingRef = useRef(editing)
-  useEffect(() => {
-    editingRef.current = editing
-  }, [editing])
-  // 同じ支払いを編集し直すときもフォームを作り直すための番号
-  const [editRev, setEditRev] = useState(0)
-  const setEditing = (e: Expense | null) => {
-    setEditingState(e)
-    setEditRev((r) => r + 1)
-  }
+  const { store, data, error, online, slow } = useTripData(tripId)
+  const { editing, rev: editRev, setEditing, isCurrent } = useEditing()
+  const layout = useLayout()
+  const { setDrawer, setSheet } = layout
+  const { toast, notify, close: closeToast } = useToast()
+  const [askConfirm, confirmUi] = useConfirm()
+  // 一覧から開いたレシート写真
+  const receiptViewer = useReceiptViewer((msg) => notify(msg, { tone: 'error' }))
   const [copied, setCopied] = useState(false)
   // 精算・一覧に含めるイベント。空なら全部。'' は未分類
   const [filter, setFilter] = useState<string[]>([])
-  // デスクトップでの格納状態 (端末に保存) / タブレット・スマホでの引き出し / スマホでの入力画面
-  const [collapsed, setCollapsed] = useState(() => loadFlag(COLLAPSED_KEY))
-  const [drawer, setDrawer] = useState(false)
-  // 十分な幅 (1440px 以上) では格納する必要がないため、常に展開する
-  const [wide, setWide] = useState(() => matchMedia(WIDE_QUERY).matches)
-  useEffect(() => {
-    const mq = matchMedia(WIDE_QUERY)
-    const on = () => setWide(mq.matches)
-    mq.addEventListener('change', on)
-    return () => mq.removeEventListener('change', on)
-  }, [])
-  const [sheet, setSheet] = useState(false)
   const settingsRef = useRef<HTMLDialogElement>(null)
-  const [askConfirm, confirmUi] = useConfirm()
-  // 一覧から開いたレシート写真 (src が null の間は読み込み中)
-  const [receiptView, setReceiptView] = useState<{ src: string | null } | null>(null)
-  const [widths, setWidths] = useState(() => loadJson<Widths>(WIDTHS_KEY, {}))
-  const [toast, setToast] = useState<ToastMessage | null>(null)
-  const [online, setOnline] = useState(() => navigator.onLine)
-  const [slow, setSlow] = useState(false)
-
-  const notify = useCallback(
-    (text: string, opts: Omit<ToastMessage, 'id' | 'text'> = {}) =>
-      // 「元に戻す」付きの通知は、操作のない普通の通知では上書きしない (取り消しの機会を失わないため)
-      setToast((cur) => (cur?.action && !opts.action && opts.tone !== 'error' ? cur : { id: Date.now(), text, ...opts })),
-    [],
-  )
-  const closeToast = useCallback(() => setToast(null), [])
-
-  // 通信状態と、待つのをやめた書き込みの後からの失敗
-  useEffect(() => {
-    const on = () => setOnline(true)
-    const off = () => setOnline(false)
-    const failed = (e: Event) => notify(`保存できなかった変更があります: ${friendlyError((e as CustomEvent).detail)}`, { tone: 'error' })
-    window.addEventListener('online', on)
-    window.addEventListener('offline', off)
-    window.addEventListener(WRITE_ERROR_EVENT, failed)
-    return () => {
-      window.removeEventListener('online', on)
-      window.removeEventListener('offline', off)
-      window.removeEventListener(WRITE_ERROR_EVENT, failed)
-    }
-  }, [notify])
-
-  // 送信待ちの変更があるうちにタブを閉じようとしたら確認する (端末には残るが、次に開くまで他の人に届かない)
-  const pending = !!data?.pending
-  useEffect(() => {
-    if (!pending) return
-    const warn = (e: BeforeUnloadEvent) => e.preventDefault()
-    window.addEventListener('beforeunload', warn)
-    return () => window.removeEventListener('beforeunload', warn)
-  }, [pending])
-
-  // 読み込みが長引いたら理由を示す (圏外で初めて開いたグループなど)
-  useEffect(() => {
-    const t = setTimeout(() => setSlow(true), 8000)
-    return () => clearTimeout(t)
-  }, [tripId])
-
-  useEffect(() => saveJson(WIDTHS_KEY, widths), [widths])
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return
-      setDrawer(false)
-      setSheet(false)
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [])
-
-  useEffect(() => {
-    let unsub: (() => void) | undefined
-    let cancelled = false
-    getStore().then((s) => {
-      if (cancelled) return
-      setStore(s)
-      unsub = s.subscribe(tripId, setData, (e) => setError(e.message))
-    })
-    return () => {
-      cancelled = true
-      unsub?.()
-    }
-  }, [tripId])
-
-  useEffect(() => {
-    if (data) {
-      touchRecent(tripId, data.trip.name)
-      document.title = `${data.trip.name} - おあいこ`
-    }
-  }, [tripId, data])
 
   const nameOf = useMemo(() => {
     const map = new Map(data?.members.map((m) => [m.id, m.name]))
@@ -190,14 +81,6 @@ export function TripPage({ tripId }: { tripId: string }) {
     }
   }
 
-  // 編集中に他の人が削除した場合はフォームの代わりに知らせる
-  const editingNow = editing && data.expenses.find((e) => e.id === editing.id)
-  const editingGone = !!editing && !editingNow
-  // 編集を始めた後に他の人が同じ支払いを更新した (保存すると上書きになる)
-  // (createdAt はサーバー時刻の確定で変わるため比較しない)
-  const content = (e: Expense) => JSON.stringify({ ...e, createdAt: 0 })
-  const editingChanged = !!editing && !!editingNow && content(editingNow) !== content(editing)
-
   const syncLabel = !online ? 'オフライン' : data.pending ? '送信待ち' : ''
 
   async function share() {
@@ -218,12 +101,6 @@ export function TripPage({ tripId }: { tripId: string }) {
   function rename() {
     const name = askName('グループ名', 100, { current: data!.trip.name })
     if (name) run(store!.renameTrip(tripId, name))
-  }
-
-  function toggleCollapsed() {
-    const next = !collapsed
-    setCollapsed(next)
-    saveFlag(COLLAPSED_KEY, next)
   }
 
   async function addCategory() {
@@ -261,16 +138,13 @@ export function TripPage({ tripId }: { tripId: string }) {
     if (archived) setFilter(filter.filter((k) => k !== id))
   }
 
-  const layoutStyle = {
-    ...(widths.sb ? { '--sb-w': `${widths.sb}px` } : {}),
-    ...(widths.form ? { '--form-w': `${widths.form}px` } : {}),
-  } as React.CSSProperties
+  const closeEditor = () => {
+    setEditing(null)
+    setSheet(false)
+  }
 
   return (
-    <div
-      className={`layout ${collapsed && !wide ? 'collapsed' : ''} ${drawer ? 'drawer-open' : ''} ${sheet ? 'sheet-open' : ''}`}
-      style={layoutStyle}
-    >
+    <div className={layout.className} style={layout.style}>
       {/* デスクトップの上部見出し。ロゴは中央 (グループ名はサイドバー上端) */}
       <header className="apphead">
         <a href="/" className="logo">
@@ -292,8 +166,8 @@ export function TripPage({ tripId }: { tripId: string }) {
         onSettings={() => settingsRef.current?.showModal()}
         onShare={share}
         copied={copied}
-        collapsed={collapsed && !wide}
-        onToggleCollapse={toggleCollapsed}
+        collapsed={layout.collapsed}
+        onToggleCollapse={layout.toggleCollapsed}
         onClose={() => setDrawer(false)}
       />
       <div className="backdrop" onClick={() => setDrawer(false)} aria-hidden />
@@ -314,110 +188,21 @@ export function TripPage({ tripId }: { tripId: string }) {
         </button>
       </header>
 
-      <section className="col-form" aria-label={editing ? '支払いを編集' : '支払いを追加'}>
-        {!collapsed && (
-          <ResizeHandle
-            label="サイドバーの幅"
-            className="left"
-            min={180}
-            max={400}
-            measure={() => document.querySelector('.sidebar')!.getBoundingClientRect().width}
-            onChange={(sb) => setWidths((w) => ({ ...w, sb }))}
-            onReset={() => setWidths((w) => ({ ...w, sb: undefined }))}
-          />
-        )}
-        <ResizeHandle
-          label="支払い入力欄の幅"
-          className="right"
-          min={340}
-          max={720}
-          measure={() => document.querySelector('.col-form')!.getBoundingClientRect().width}
-          onChange={(form) => setWidths((w) => ({ ...w, form }))}
-          onReset={() => setWidths((w) => ({ ...w, form: undefined }))}
-        />
-        {store.kind === 'local' && <p className="notice">ローカルモード: このURLを他の端末で開いてもデータは表示されません。</p>}
-        <div className="card">
-          <div className="row">
-            <h2 className="grow">{editing ? '支払いを編集' : '支払いを追加'}</h2>
-            <button
-              className="ghost icon sheet-close"
-              onClick={() => {
-                setSheet(false)
-                setEditing(null)
-              }}
-              aria-label="閉じる"
-            >
-              <X size={20} />
-            </button>
-          </div>
-          {editingChanged && (
-            <p className="notice">
-              この支払いは編集中に他の人が更新しました。保存すると上書きになります。
-              <button className="ghost small" onClick={() => setEditing(editingNow!)}>
-                最新の内容で編集し直す
-              </button>
-            </p>
-          )}
-          {editingGone ? (
-            <div className="stack">
-              <p className="notice">編集中の支払いは他の人が削除しました。</p>
-              <button
-                onClick={() => {
-                  setEditing(null)
-                  setSheet(false)
-                }}
-              >
-                閉じる
-              </button>
-            </div>
-          ) : (
-            <ExpenseForm
-              // 新規入力はサイドバーで1イベントだけ選んでいればそれを初期値にする (切り替えで作り直す)
-              key={editing ? `${editing.id}-${editRev}` : `new-${defaultCategoryId}`}
-              members={data.members}
-              categories={data.categories.filter((c) => !c.archived || c.id === editing?.categoryId)}
-              initial={editing}
-              defaultCategoryId={defaultCategoryId}
-              onCreateCategory={(name) => store.addCategory(tripId, name)}
-              readReceipt={readReceipt}
-              getReceipt={editing ? () => store.getReceipt(tripId, editing.id) : undefined}
-              receiptLimitReached={data.expenses.filter((e) => e.hasReceipt).length >= MAX_RECEIPTS_PER_GROUP}
-              onSubmit={async (input, receipt) => {
-                if (editingChanged && !confirm('この支払いは他の人が更新しています。上書きして保存しますか？')) throw new Error('cancelled')
-                const target = editing
-                const p = editing ? store.updateExpense(tripId, editing.id, input, receipt) : store.addExpense(tripId, input, receipt)
-                // 先に知らせる (受領を待った後だと、その間に出た「元に戻す」の通知を上書きしてしまう)
-                if (!editing) notify(`「${input.title}」を追加しました`)
-                if (navigator.onLine) {
-                  // 通信できるときは受領を待つ (最大2.5秒)。拒否されたら入力を残したまま知らせる
-                  try {
-                    await p
-                  } catch (e) {
-                    notify(`保存できませんでした: ${friendlyError(e)}`, { tone: 'error' })
-                    throw e
-                  }
-                } else {
-                  // 圏外では端末に即反映されるので待たずに閉じる (送信は電波が戻ってから)
-                  run(p)
-                }
-                // 待っている間に別の支払いの編集を始めていたら閉じない
-                if (editingRef.current?.id === target?.id) {
-                  setEditing(null)
-                  setSheet(false)
-                }
-              }}
-              onCancel={
-                editing
-                  ? () => {
-                      setEditing(null)
-                      setSheet(false)
-                    }
-                  : undefined
-              }
-            />
-          )}
-        </div>
-      </section>
+      <EditorPanel
+        store={store}
+        tripId={tripId}
+        data={data}
+        editing={editing}
+        editRev={editRev}
+        setEditing={setEditing}
+        isCurrent={isCurrent}
+        onClose={closeEditor}
+        defaultCategoryId={defaultCategoryId}
+        sidebarHandle={!layout.collapsedPref}
+        setWidth={layout.setWidth}
+        notify={notify}
+        run={run}
+      />
 
       <section className="col-list" aria-label="精算と支払い一覧">
         <SettlementPanel
@@ -451,15 +236,7 @@ export function TripPage({ tripId }: { tripId: string }) {
           nameOf={nameOf}
           memberIds={data.members.map((m) => m.id)}
           categoryOf={categoryOf}
-          onShowReceipt={async (e) => {
-            setReceiptView({ src: null })
-            const src = await store.getReceipt(tripId, e.id).catch(() => null)
-            if (src) setReceiptView({ src })
-            else {
-              setReceiptView(null)
-              notify('写真を読み込めませんでした。電波の良い場所で再度試してください', { tone: 'error' })
-            }
-          }}
+          onShowReceipt={(e) => receiptViewer.open(() => store.getReceipt(tripId, e.id))}
           editingId={editing?.id}
           onEdit={(e) => {
             setEditing(e)
@@ -492,35 +269,9 @@ export function TripPage({ tripId }: { tripId: string }) {
 
       <Toast toast={toast} onClose={closeToast} />
       {confirmUi}
-      {receiptView && <ReceiptViewer src={receiptView.src} onClose={() => setReceiptView(null)} />}
+      {receiptViewer.ui}
 
-      <dialog ref={settingsRef} className="settings" onClick={(e) => e.target === e.currentTarget && settingsRef.current?.close()}>
-        <div className="row">
-          <h2 className="grow">設定</h2>
-          <button className="ghost icon" onClick={() => settingsRef.current?.close()} aria-label="閉じる">
-            <X size={20} />
-          </button>
-        </div>
-        <NamesPanel
-          title={`メンバー (${data.members.length}人)`}
-          entries={data.members}
-          placeholder="メンバーを追加"
-          isReferenced={(id) => isMemberReferenced(data.expenses, id)}
-          onAdd={(name) => run(store.addMember(tripId, name))}
-          onRename={(id, name) => run(store.renameMember(tripId, id, name))}
-          onRemove={(id) => run(store.removeMember(tripId, id))}
-        />
-        <NamesPanel
-          title="イベント"
-          entries={data.categories}
-          placeholder="例: 沖縄旅行、3月の飲み会"
-          isReferenced={(id) => data.expenses.some((e) => e.categoryId === id)}
-          askBeforeRemove={false}
-          onAdd={(name) => run(store.addCategory(tripId, name))}
-          onRename={(id, name) => run(store.renameCategory(tripId, id, name))}
-          onRemove={(id) => deleteEvent(id, true)}
-        />
-      </dialog>
+      <SettingsDialog ref={settingsRef} data={data} store={store} tripId={tripId} run={run} onDeleteEvent={(id) => deleteEvent(id, true)} />
     </div>
   )
 }
