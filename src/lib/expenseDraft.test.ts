@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildExpense, fillRemainder, type Draft } from './expenseDraft'
+import { buildExpense, fillRemainder, pickItemMember, type Draft } from './expenseDraft'
 
 const A = { id: 'a', name: 'たろう' }
 const B = { id: 'b', name: 'はなこ' }
@@ -88,5 +88,20 @@ describe('fillRemainder', () => {
     expect(fillRemainder(100, ['a', 'b'], { a: '200', b: '' })).toBeNull()
     expect(fillRemainder(NaN, ['a'], {})).toBeNull()
     expect(fillRemainder(100, [], {})).toBeNull()
+  })
+})
+
+describe('pickItemMember', () => {
+  const all = ['a', 'b', 'c']
+  it('全員のときは その人だけ', () => {
+    expect(pickItemMember(['a', 'b', 'c'], 'b', all)).toEqual(['b'])
+    expect(pickItemMember(['c', 'a', 'b', 'x'], 'a', all)).toEqual(['a'])
+  })
+  it('一部のときは 足す・外す', () => {
+    expect(pickItemMember(['b'], 'c', all)).toEqual(['b', 'c'])
+    expect(pickItemMember(['b', 'c'], 'b', all)).toEqual(['c'])
+  })
+  it('誰もいなくなったら全員に戻す', () => {
+    expect(pickItemMember(['b'], 'b', all)).toEqual(all)
   })
 })

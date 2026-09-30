@@ -1,5 +1,5 @@
 import { Plus, X } from 'lucide-react'
-import type { ItemDraft } from '../lib/expenseDraft'
+import { pickItemMember, type ItemDraft } from '../lib/expenseDraft'
 import { yen } from '../lib/format'
 import type { Member } from '../types'
 
@@ -17,14 +17,11 @@ type Props = {
   preview: Record<string, number> | null
 }
 
-/** 割り方「品目」: 品目ごとに対象者を選ぶ */
+/** 割り方「品目」: 品目ごとに対象者を選ぶ。読み取り直後は全員で、個人の物は名前を1回押せばその人だけになる */
 export function ItemsEditor({ members, items, onChange, itemsTotal, amount, amountEmpty, onApplyTotal, preview }: Props) {
   const allIds = () => members.map((m) => m.id)
+  const all = (it: ItemDraft) => members.every((m) => it.memberIds.includes(m.id))
   const update = (i: number, patch: Partial<ItemDraft>) => onChange(items.map((it, j) => (j === i ? { ...it, ...patch } : it)))
-  const toggleMember = (i: number, id: string) => {
-    const ids = items[i].memberIds
-    update(i, { memberIds: ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id] })
-  }
 
   return (
     <>
@@ -58,13 +55,23 @@ export function ItemsEditor({ members, items, onChange, itemsTotal, amount, amou
               </button>
             </div>
             <div className="chips">
+              <button
+                type="button"
+                className={`chip toggle ${all(it) ? 'on' : ''}`}
+                aria-pressed={all(it)}
+                onClick={() => update(i, { memberIds: allIds() })}
+              >
+                全員
+              </button>
               {members.map((m) => (
                 <button
                   type="button"
                   key={m.id}
-                  className={`chip toggle ${it.memberIds.includes(m.id) ? 'on' : ''}`}
-                  aria-pressed={it.memberIds.includes(m.id)}
-                  onClick={() => toggleMember(i, m.id)}
+                  // 全員のときの名前は、押すと「その人だけ」になることを点線の枠で示す
+                  className={`chip toggle ${all(it) ? 'pick' : it.memberIds.includes(m.id) ? 'on' : ''}`}
+                  aria-pressed={!all(it) && it.memberIds.includes(m.id)}
+                  aria-label={all(it) ? `${m.name}だけ` : undefined}
+                  onClick={() => update(i, { memberIds: pickItemMember(it.memberIds, m.id, allIds()) })}
                 >
                   {m.name}
                 </button>

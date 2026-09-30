@@ -492,6 +492,13 @@ summary {
   font-weight: 600;
 }
 
+/* 品目が全員のときの名前: 押すと「その人だけ」になる */
+.chip.toggle.pick {
+  border-style: dashed;
+  border-color: var(--border-strong);
+  color: var(--body);
+}
+
 .small-chip {
   margin-left: 8px;
   font-size: 0.75rem;
