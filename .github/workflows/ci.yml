@@ -1,0 +1,77 @@
+# プルリクエスト: テスト一式とプレビュー公開。main: テスト一式と本番公開
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - run: npm install -g firebase-tools
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - run: npm run test:rules
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7
+
+  # サービスアカウントの鍵 (README「GitHub Actions の設定」) が未登録の間は公開を飛ばす
+  deploy:
+    needs: test
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+    env:
+      HAS_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_TIEDE_8EAE4 != '' }}
+      VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+      VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+      VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+      VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+      VITE_RECAPTCHA_SITE_KEY: ${{ secrets.VITE_RECAPTCHA_SITE_KEY }}
+    steps:
+      - if: env.HAS_SA != 'true'
+        run: echo "::notice::FIREBASE_SERVICE_ACCOUNT_TIEDE_8EAE4 が未登録のため公開を飛ばしました"
+      - if: env.HAS_SA == 'true'
+        uses: actions/checkout@v4
+      - if: env.HAS_SA == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - if: env.HAS_SA == 'true'
+        run: npm ci && npm run build
+      # プルリクエストはプレビューチャンネル (7日で失効、URL をコメント)、main は本番
+      - if: env.HAS_SA == 'true'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_TIEDE_8EAE4 }}
+          projectId: tiede-8eae4
+          channelId: ${{ github.event_name == 'push' && 'live' || '' }}
+          expires: 7d

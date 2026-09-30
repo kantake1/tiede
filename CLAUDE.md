@@ -48,15 +48,15 @@
 - 読む量の多い作業 (全体レビュー、画面確認、通しテスト、文書更新) は `agy -p "<指示>" --model gemini-3.8-flash-{high|medium} --output-format json --json-schema <schema>` に任せ、Claude は照合・修正・コミットを担う
 - 指摘は必ずコードで確かめてから直す (誤った指摘が混ざる)。コマンド実行やファイル操作をさせるときは `--dangerously-skip-permissions`、作業前に git をきれいにしておく
 - 動作確認・通しテストは `npm run dev:emulator` (Firestore エミュレータ、`.env.emulator`) に対して行い、本番にテスト用データを作らない。`npm run dev` は本番に接続する
-- 通しテストは `.qa/scenario.mjs` (3人・2日間の旅行の10手順、git 管理外)。Playwright は作業用フォルダに入れたものを参照している
+- 通しテストは `e2e/trip.e2e.ts` (`npm run e2e`)。プルリクエストでは GitHub Actions がテスト一式とプレビュー公開を行い、`main` へのマージで本番に公開する (`.github/workflows/ci.yml`)
 
 ## コマンド
 
-- `npm run dev` / `npm run dev:emulator` / `npm test` / `npm run test:rules` (エミュレータ、Java 21 が必要) / `npm run build` (型チェック込み) / `npm run lint`
+- `npm run dev` / `npm run dev:emulator` / `npm test` / `npm run test:rules`・`npm run e2e` (エミュレータ、Java 21 が必要) / `npm run build` (型チェック込み) / `npm run lint`
 
 ## 未完了・次の候補
 
-- Firebase プロジェクト `tiede-8eae4` (Firestore: asia-northeast1, Standard)。ルールはデプロイ・検証済み。Hosting 公開済み (https://tiede-8eae4.web.app、`firebase deploy --only hosting`)
+- Firebase プロジェクト `tiede-8eae4` (Firestore: asia-northeast1, Standard)。ルールはデプロイ・検証済み。Hosting 公開済み (https://tiede-8eae4.web.app、`main` へのマージで自動公開。手動は `firebase deploy --only hosting`)
 - App Check: reCAPTCHA v3 (Enterprise は課金アカウントが必要なため不採用)。実機ブラウザで検証済み (自動テストのヘッドレス Chromium はボット判定で通らない)。AI Logic は強制済み、Firestore は未強制 (コンソールで検証済みリクエストの割合を確認してから強制する)。開発時は `.env.local` の `VITE_APPCHECK_DEBUG_TOKEN` (コンソール登録済み) を使う
 - 候補: 実機 iPhone で PWA (ホーム画面追加・圏外起動)・Safari の表示を確認する
 - Service Worker のキャッシュ名は固定 (`oaiko-v6`)。古いビルドのファイルが溜まるため、大きな変更時は名前を上げる

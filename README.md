@@ -31,6 +31,7 @@ npm run dev      # 開発サーバー起動 (.env.local があれば本番の Fi
 npm run dev:emulator  # Firestore エミュレータに接続して開発サーバー起動 (本番に触れない。動作確認・通しテストはこちら)
 npm test         # テスト実行 (vitest)
 npm run test:rules    # セキュリティルールのテスト (エミュレータを起動して実行)
+npm run e2e           # 通しテスト (Playwright。エミュレータを起動して実行。初回は npx playwright install chromium)
 npm run lint     # 静的解析 (oxlint)
 npm run build    # 型チェック (tsc) + プロダクションビルド (vite)
 npm run preview  # ビルド成果物のプレビュー
@@ -83,6 +84,31 @@ firebase deploy --only firestore:rules
 ```
 
 ※ ホスティングを含めてデプロイする場合は `firebase deploy` を実行します。
+
+### 6. GitHub Actions の設定 (自動テスト・プレビュー・本番公開)
+`.github/workflows/ci.yml` がプルリクエストと `main` への push で動きます。
+
+- テスト一式: lint / `npm test` / build / `npm run test:rules` / `npm run e2e` (すべてエミュレータで、本番に触れない)
+- プルリクエスト: Firebase Hosting のプレビューチャンネル (7日で失効) に公開し、URL をコメント。データは本番の Firestore
+- `main`: 本番 (live) に公開
+
+必要な Secrets (リポジトリの Settings > Secrets and variables > Actions):
+
+| 名前 | 内容 |
+|---|---|
+| `VITE_FIREBASE_API_KEY` ほか `.env.local` の `VITE_FIREBASE_*`・`VITE_RECAPTCHA_SITE_KEY` | ビルド用の値 (`VITE_APPCHECK_DEBUG_TOKEN` は登録しない) |
+| `FIREBASE_SERVICE_ACCOUNT_TIEDE_8EAE4` | Hosting へ公開するサービスアカウントの鍵 (JSON) |
+
+サービスアカウントの鍵は、リポジトリで次を実行すると作成・登録されます (ブラウザで GitHub と Google の認証が必要)。
+
+```sh
+firebase init hosting:github
+```
+
+- 質問には「リポジトリ: kantake1/tiede」「ビルドスクリプトの設定: No」「マージ時の公開: No」と答えます
+- 生成されたワークフロー (`.github/workflows/firebase-hosting-*.yml`) は `ci.yml` と重複するので削除します
+- 鍵が未登録の間は、公開の手順だけ飛ばします (テストは動きます)
+- プレビューの URL (`tiede-8eae4--pr*.web.app`) でレシート読み取りを使う場合は、reCAPTCHA の管理画面で許可ドメインに `web.app` を加えます
 
 ## データ構造
 
