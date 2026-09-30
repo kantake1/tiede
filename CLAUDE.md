@@ -47,11 +47,12 @@
 
 - 読む量の多い作業 (全体レビュー、画面確認、通しテスト、文書更新) は `agy -p "<指示>" --model gemini-3.8-flash-{high|medium} --output-format json --json-schema <schema>` に任せ、Claude は照合・修正・コミットを担う
 - 指摘は必ずコードで確かめてから直す (誤った指摘が混ざる)。コマンド実行やファイル操作をさせるときは `--dangerously-skip-permissions`、作業前に git をきれいにしておく
+- 動作確認・通しテストは `npm run dev:emulator` (Firestore エミュレータ、`.env.emulator`) に対して行い、本番にテスト用データを作らない。`npm run dev` は本番に接続する
 - 通しテストは `.qa/scenario.mjs` (3人・2日間の旅行の10手順、git 管理外)。Playwright は作業用フォルダに入れたものを参照している
 
 ## コマンド
 
-- `npm run dev` / `npm test` / `npm run build` (型チェック込み) / `npm run lint`
+- `npm run dev` / `npm run dev:emulator` / `npm test` / `npm run test:rules` (エミュレータ、Java 21 が必要) / `npm run build` (型チェック込み) / `npm run lint`
 
 ## 未完了・次の候補
 

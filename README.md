@@ -27,12 +27,16 @@
 
 ```sh
 npm install      # 依存関係のインストール
-npm run dev      # 開発サーバー起動
+npm run dev      # 開発サーバー起動 (.env.local があれば本番の Firestore に接続)
+npm run dev:emulator  # Firestore エミュレータに接続して開発サーバー起動 (本番に触れない。動作確認・通しテストはこちら)
 npm test         # テスト実行 (vitest)
+npm run test:rules    # セキュリティルールのテスト (エミュレータを起動して実行)
 npm run lint     # 静的解析 (oxlint)
 npm run build    # 型チェック (tsc) + プロダクションビルド (vite)
 npm run preview  # ビルド成果物のプレビュー
 ```
+
+※ エミュレータには Java 21 以上が必要です (`mise install` で `mise.toml` の Java が入ります)。
 
 ※ `.env.local` がない場合はブラウザの `localStorage` を利用するローカルモード (共同編集不可) で動作します。
 

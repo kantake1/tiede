@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase/app'
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check'
 import {
   collection,
+  connectFirestoreEmulator,
   deleteDoc,
   doc,
   getDoc,
@@ -42,6 +43,8 @@ if (import.meta.env.VITE_RECAPTCHA_SITE_KEY) {
 // 外出先の圏外・弱電波でも使えるよう、データを端末 (IndexedDB) に保持する。
 // 書き込みは端末に即反映され、電波が戻るとサーバーへ送られる。複数タブでも共有する
 const db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) })
+// 動作確認用 (`npm run dev:emulator`)。本番のデータに触れない
+if (import.meta.env.VITE_FIRESTORE_EMULATOR) connectFirestoreEmulator(db, '127.0.0.1', 8080)
 
 const trips = () => collection(db, 'trips')
 const members = (tripId: string) => collection(db, 'trips', tripId, 'members')
