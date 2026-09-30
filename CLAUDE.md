@@ -28,8 +28,9 @@
 
 - `src/lib/split.ts` 1件の支払いの各自負担額 (整数円、合計は必ず支払額と一致)
 - `src/lib/settle.ts` 残高計算と最小送金の算出。テストは `settle.test.ts`
+- `src/lib/expenseDraft.ts` 支払い入力の検証と組み立て、`src/lib/tripView.ts` サイドバーの行・絞り込み。画面から切り離した計算はここに置きテストする
 - `src/store/` データ層。`VITE_FIREBASE_PROJECT_ID` があれば Firestore、無ければ localStorage のローカルモード
-- `src/pages/`, `src/components/` UI。グループ画面は サイドバー(イベント, 格納可) | 支払いを追加 | 精算・一覧 の3列。1128px未満はサイドバーを引き出し式、744px未満は一覧のみで追加は＋ボタンから全画面 (`src/index.css` 末尾)
+- `src/pages/`, `src/components/` UI、`src/hooks/` グループ画面の状態 (購読・列の配置・編集中・通知)。グループ画面は サイドバー(イベント, 格納可) | 支払いを追加 | 精算・一覧 の3列。1128px未満はサイドバーを引き出し式、744px未満は一覧のみで追加は＋ボタンから全画面 (`src/index.css` 末尾)
 - `firestore.rules` アクセス制御 (trips の list 禁止、フィールド検証)
 
 ## デザイン
