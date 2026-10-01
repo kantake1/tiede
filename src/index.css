@@ -93,9 +93,14 @@
   box-sizing: border-box;
 }
 
+/* 引っ張って再読み込みするときに見える上端も同じ色にする */
+html,
+body {
+  background: var(--surface-soft);
+}
+
 body {
   margin: 0;
-  background: var(--surface-soft);
   color: var(--text);
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
@@ -162,6 +167,26 @@ dialog.settings {
   backdrop-filter: blur(var(--glass-blur)) saturate(180%);
   border: 0.5px solid var(--glass-line);
   box-shadow: inset 0 0.5px 0 var(--glass-edge), var(--glass-shadow);
+}
+
+/* 上部の見出し: いちばん上では下地に溶け込み (境目なし)、スクロールすると下を流れる内容をぼかすガラスになる */
+@supports (animation-timeline: scroll()) {
+  .apphead,
+  .topbar {
+    animation: head-edge linear both;
+    animation-timeline: scroll(root);
+    animation-range: 0 24px;
+  }
+}
+
+@keyframes head-edge {
+  from {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }
 
 .card {
@@ -752,7 +777,7 @@ label.button.disabled {
   /* 入力欄が広げられても精算・一覧は 360px を下回らない */
   grid-template-columns: var(--sb) minmax(340px, var(--form-w, 420px)) minmax(360px, 1fr);
   grid-template-areas:
-    'head head head'
+    'side head head'
     'side form list';
   grid-template-rows: auto 1fr;
   min-height: 100vh;
@@ -809,22 +834,22 @@ label.button.disabled {
 }
 
 .layout.collapsed {
-  --sb: 68px;
+  --sb: 56px;
 }
 
-/* サイドバーは画面端から 12px 離した浮いた板 */
+/* サイドバーは画面の上端から下端まで、左端に付けたガラスの板。区切りは右の細線だけ */
 .sidebar {
   grid-area: side;
   position: sticky;
-  top: calc(var(--head-h) + 12px);
-  height: calc(100vh - var(--head-h) - 24px);
-  height: calc(100dvh - var(--head-h) - 24px);
-  margin: 12px 0 12px 12px;
+  top: 0;
+  height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   gap: 12px;
   padding: 16px 12px;
-  border-radius: 20px;
+  border-width: 0 0.5px 0 0;
+  box-shadow: none;
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -845,6 +870,9 @@ label.button.disabled {
   list-style: none;
   margin: 0 0 4px;
   padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .sb-cats label {
@@ -884,7 +912,7 @@ label.button.disabled {
   margin-top: auto;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 8px;
 }
 
 button.sb-item {
@@ -1073,12 +1101,14 @@ dialog.settings::backdrop {
 
   .sidebar {
     position: fixed;
-    inset: calc(8px + env(safe-area-inset-top)) auto calc(8px + env(safe-area-inset-bottom)) 8px;
+    inset: 0 auto 0 0;
     height: auto;
-    margin: 0;
+    padding-top: calc(16px + env(safe-area-inset-top));
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
     width: min(280px, 85vw);
     z-index: 30;
-    transform: translateX(calc(-100% - 16px));
+    box-shadow: var(--glass-shadow);
+    transform: translateX(-100%);
     transition: transform 0.2s ease;
   }
 

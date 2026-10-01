@@ -203,7 +203,7 @@ test('広い画面: 格納を選んでいてもサイドバー幅の取っ手が
   await expect(page.getByRole('separator', { name: /サイドバーの幅/ })).toBeAttached()
 })
 
-test('広い画面: サイドバー幅は矢印キー1回で 16px 広がる (浮いた板の余白で縮まない)', async ({ page }) => {
+test('広い画面: サイドバー幅は矢印キー1回で 16px 広がる', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/')
   await page.getByPlaceholder('例: いつものメンバー').fill('幅')
