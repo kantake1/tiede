@@ -15,6 +15,12 @@ export type Transfer = {
   amount: number
 }
 
+/** 受取済みの人と、その人の負担額 (立て替えた本人・負担0円の人は除く) */
+export function settledOf(e: Expense): Record<string, number> {
+  const owed = computeOwed(e)
+  return Object.fromEntries((e.settledIds ?? []).filter((id) => id !== e.payerId && owed[id] > 0).map((id) => [id, owed[id]]))
+}
+
 export function computeBalances(members: Member[], expenses: Expense[]): Balance[] {
   const map = new Map<string, Balance>()
   const get = (id: string) => {
@@ -29,6 +35,11 @@ export function computeBalances(members: Member[], expenses: Expense[]): Balance
   for (const e of expenses) {
     get(e.payerId).paid += e.amount
     for (const [id, v] of Object.entries(computeOwed(e))) get(id).owed += v
+    // 受取済みの分は立替額・負担額の両方から除く
+    for (const [id, v] of Object.entries(settledOf(e))) {
+      get(e.payerId).paid -= v
+      get(id).owed -= v
+    }
   }
   for (const b of map.values()) b.net = b.paid - b.owed
   return [...map.values()]

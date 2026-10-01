@@ -165,3 +165,21 @@ test('広い画面: 格納を選んでいてもサイドバー幅の取っ手が
   await page.waitForURL(/\/t\/.+/)
   await expect(page.getByRole('separator', { name: /サイドバーの幅/ })).toBeAttached()
 })
+
+test('受取済みの人はその支払いの精算から外れる', async ({ page }) => {
+  await page.goto('/')
+  await page.getByPlaceholder('例: いつものメンバー').fill('受取')
+  await page.locator('textarea').fill('Aさん\nBさん\nCさん')
+  await page.locator('button[type="submit"]').click()
+  await page.waitForURL(/\/t\/.+/)
+
+  const f = form(page)
+  await f.getByPlaceholder('例: 食事代').fill('焼肉')
+  await f.getByPlaceholder('12000').fill('3000')
+  await expect(f.getByRole('button', { name: 'Aさん から受取済み' })).toHaveCount(0) // 立て替えた本人には付けられない
+  await f.getByRole('button', { name: 'Bさん から受取済み' }).click()
+  await f.getByRole('button', { name: '追加', exact: true }).click()
+
+  await expect(page.locator('.expense', { hasText: '焼肉' })).toContainText('受取済み 1人')
+  await expect(page.locator('.transfers li')).toHaveText([/Cさん.*Aさん.*1,000/])
+})

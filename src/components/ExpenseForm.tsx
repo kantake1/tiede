@@ -71,7 +71,9 @@ export function ExpenseForm({
   const [items, setItems] = useState<ItemDraft[]>(() =>
     (initial?.items ?? []).map((it) => ({ name: it.name, priceText: String(it.price), memberIds: it.memberIds })),
   )
+  const [settled, setSettled] = useState<string[]>(initial?.settledIds ?? [])
   const [busy, setBusy] = useState(false)
+  const toggleSettled = (id: string) => setSettled(settled.includes(id) ? settled.filter((x) => x !== id) : [...settled, id])
   const receipt = useReceipt({
     readReceipt,
     getReceipt,
@@ -125,6 +127,8 @@ export function ExpenseForm({
           categoryId,
           memo: memo.trim(),
           date,
+          // 立て替えた本人・対象から外れた人の印は保存しない
+          settledIds: settled.filter((id) => id !== payerId && (preview?.[id] ?? 0) > 0),
         },
         receipt.receiptNew,
       )
@@ -135,6 +139,7 @@ export function ExpenseForm({
         setAmountText('')
         setMemo('')
         setItems([])
+        setSettled([])
         setValues(Object.fromEntries(members.map((m) => [m.id, ''])))
         setIncluded(Object.fromEntries(members.map((m) => [m.id, true])))
         setMode('equal')
@@ -222,6 +227,9 @@ export function ExpenseForm({
               amountEmpty={amountText.trim() === ''}
               onApplyTotal={() => setAmountText(String(itemsTotal))}
               preview={preview}
+              payerId={payerId}
+              settled={settled}
+              onToggleSettled={toggleSettled}
             />
           ) : (
             <SharesEditor
@@ -239,6 +247,9 @@ export function ExpenseForm({
                 if (next) setValues(next)
               }}
               preview={preview}
+              payerId={payerId}
+              settled={settled}
+              onToggleSettled={toggleSettled}
             />
           )}
         </div>

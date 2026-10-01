@@ -1,6 +1,7 @@
-import { ChevronRight, ReceiptText } from 'lucide-react'
+import { Check, ChevronRight, ReceiptText } from 'lucide-react'
 import { formatDate, groupByDate } from '../lib/date'
 import { yen } from '../lib/format'
+import { settledOf } from '../lib/settle'
 import { computeOwed } from '../lib/split'
 import type { Expense } from '../types'
 
@@ -37,6 +38,8 @@ export function ExpenseList({ expenses, nameOf, memberIds, categoryOf, editingId
           </li>,
           ...list.map((e) => {
             const owed = computeOwed(e)
+            const settled = settledOf(e)
+            const settledCount = Object.keys(settled).length
             return (
               <li key={e.id} className={`expense ${e.id === editingId ? 'editing' : ''}`}>
                 <div className="row">
@@ -57,6 +60,7 @@ export function ExpenseList({ expenses, nameOf, memberIds, categoryOf, editingId
                     </div>
                     <div className="muted small">
                       {nameOf(e.payerId)} が立替 · {MODE_LABEL[e.mode]}
+                      {settledCount > 0 && ` · 受取済み ${settledCount}人`}
                     </div>
                   </div>
                   <div className="expense-amount">{yen(e.amount)}</div>
@@ -86,7 +90,8 @@ export function ExpenseList({ expenses, nameOf, memberIds, categoryOf, editingId
                       .map(([id, v], i) => (
                         <span key={id}>
                           {i > 0 && ' / '}
-                          <span className="owed-item">
+                          <span className={`owed-item ${settled[id] ? 'paid' : ''}`}>
+                            {settled[id] && <Check size={12} aria-label="受取済み" />}
                             {nameOf(id)} {yen(v)}
                           </span>
                         </span>
