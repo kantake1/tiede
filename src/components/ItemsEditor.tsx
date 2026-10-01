@@ -1,9 +1,14 @@
-import { Plus, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, Plus, X } from 'lucide-react'
+import { useState } from 'react'
 import { pickItemMember, type ItemDraft } from '../lib/expenseDraft'
 import { yen } from '../lib/format'
+import { whoLabel } from '../lib/names'
 import type { Member } from '../types'
 import { SettledToggle } from './SettledToggle'
 import { Owed } from './SharesEditor'
+
+// これより多いと、品目ごとの名前ボタンを要約に畳む (少人数では1タップ増えるだけなので畳まない)
+const FOLD_MEMBERS = 6
 
 type Props = {
   members: Member[]
@@ -27,6 +32,37 @@ export function ItemsEditor({ members, items, onChange, itemsTotal, amount, amou
   const allIds = () => members.map((m) => m.id)
   const all = (it: ItemDraft) => members.every((m) => it.memberIds.includes(m.id))
   const update = (i: number, patch: Partial<ItemDraft>) => onChange(items.map((it, j) => (j === i ? { ...it, ...patch } : it)))
+  const nameOf = (id: string) => members.find((m) => m.id === id)?.name ?? ''
+  const fold = members.length > FOLD_MEMBERS
+  // 畳んでいるときに名前ボタンを開いている品目 (同時に1つ)
+  const [openIndex, setOpenIndex] = useState<number | null>(null)
+
+  const who = (it: ItemDraft) => whoLabel(members.filter((m) => it.memberIds.includes(m.id)).map((m) => m.id), allIds(), nameOf, true)
+  const chipsFor = (it: ItemDraft, i: number) => (
+    <div className="chips">
+      <button
+        type="button"
+        className={`chip toggle ${all(it) ? 'on' : ''}`}
+        aria-pressed={all(it)}
+        onClick={() => update(i, { memberIds: allIds() })}
+      >
+        全員
+      </button>
+      {members.map((m) => (
+        <button
+          type="button"
+          key={m.id}
+          // 全員のときの名前は、押すと「その人だけ」になることを点線の枠で示す
+          className={`chip toggle ${all(it) ? 'pick' : it.memberIds.includes(m.id) ? 'on' : ''}`}
+          aria-pressed={!all(it) && it.memberIds.includes(m.id)}
+          aria-label={all(it) ? `${m.name}だけ` : undefined}
+          onClick={() => update(i, { memberIds: pickItemMember(it.memberIds, m.id, allIds()) })}
+        >
+          {m.name}
+        </button>
+      ))}
+    </div>
+  )
 
   return (
     <>
@@ -53,35 +89,34 @@ export function ItemsEditor({ members, items, onChange, itemsTotal, amount, amou
               <button
                 type="button"
                 className="ghost small danger"
-                onClick={() => onChange(items.filter((_, j) => j !== i))}
+                onClick={() => {
+                  setOpenIndex(null)
+                  onChange(items.filter((_, j) => j !== i))
+                }}
                 aria-label={`${i + 1}行目を削除`}
               >
                 <X size={16} />
               </button>
             </div>
-            <div className="chips">
-              <button
-                type="button"
-                className={`chip toggle ${all(it) ? 'on' : ''}`}
-                aria-pressed={all(it)}
-                onClick={() => update(i, { memberIds: allIds() })}
-              >
-                全員
-              </button>
-              {members.map((m) => (
+            {fold ? (
+              <>
                 <button
                   type="button"
-                  key={m.id}
-                  // 全員のときの名前は、押すと「その人だけ」になることを点線の枠で示す
-                  className={`chip toggle ${all(it) ? 'pick' : it.memberIds.includes(m.id) ? 'on' : ''}`}
-                  aria-pressed={!all(it) && it.memberIds.includes(m.id)}
-                  aria-label={all(it) ? `${m.name}だけ` : undefined}
-                  onClick={() => update(i, { memberIds: pickItemMember(it.memberIds, m.id, allIds()) })}
+                  className={`who-sum ${all(it) ? '' : 'part'}`}
+                  aria-expanded={openIndex === i}
+                  aria-label={`${i + 1}行目の対象者: ${who(it)}`}
+                  onClick={() => setOpenIndex(openIndex === i ? null : i)}
                 >
-                  {m.name}
+                  <span className="who-text">
+                    {who(it)}
+                  </span>
+                  {openIndex === i ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                 </button>
-              ))}
-            </div>
+                {openIndex === i && <div className="who-open">{chipsFor(it, i)}</div>}
+              </>
+            ) : (
+              chipsFor(it, i)
+            )}
           </li>
         ))}
       </ul>

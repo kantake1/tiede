@@ -1355,6 +1355,67 @@ body.resizing .layout {
   color: var(--plus);
 }
 
+.owed-paid {
+  color: var(--plus);
+}
+
+/* 大人数: 品目の対象者を要約し、押すと名前ボタンを開く (ItemsEditor) */
+button.who-sum {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 4px 10px 4px 12px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  color: var(--body);
+}
+
+.who-sum .who-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+button.who-sum.part {
+  border-color: var(--text);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.who-open {
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+/* 均等: 負担額をまとめた1行 */
+.eq-sum {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--surface-soft);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 一覧の品目: 「ほかN人」を押すと全員の名前を出す */
+button.item-who {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: inherit;
+  font-weight: 400;
+  white-space: normal;
+  text-align: right;
+  text-decoration: underline dotted;
+}
+
+.item-lines li > .grow {
+  min-width: 40%;
+}
+
 .participants.with-paid li {
   grid-template-columns: 1fr auto 72px auto;
 }

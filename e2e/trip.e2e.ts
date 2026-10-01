@@ -238,6 +238,43 @@ test('一覧のコンパクト表示: 1件1行で、押すとその1件だけ開
   await expect(edit).toHaveCount(0)
 })
 
+test('大人数: 均等の負担額は1行にまとめ、品目の対象者は要約から開く', async ({ page }) => {
+  const names = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].map((n) => `${n}さん`)
+  await page.goto('/')
+  await page.getByPlaceholder('例: いつものメンバー').fill('大人数')
+  await page.getByLabel('追加するメンバーの名前').fill(names.join(', '))
+  await page.locator('button[type="submit"]').click()
+  await page.waitForURL(/\/t\/.+/)
+
+  // 均等: 8010円を8人 → 1,001円ずつ、端数の2円は立て替えた A さん
+  const f = form(page)
+  await f.getByPlaceholder('例: 食事代').fill('宴会')
+  await f.getByPlaceholder('12000').fill('8010')
+  await expect(f.locator('.eq-sum')).toHaveText('7人 各¥1,001 / Aさん ¥1,003')
+  await f.getByRole('button', { name: 'Hさん', exact: true }).click() // 対象から外す
+  await expect(f.locator('.eq-sum')).toHaveText('6人 各¥1,144 / Aさん ¥1,146')
+  await expect(f.getByRole('button', { name: 'Aさん から受取済み' })).toHaveCount(0)
+  await f.getByRole('button', { name: 'Bさん から受取済み' }).click()
+  await f.getByRole('button', { name: '追加', exact: true }).click()
+  await expect(page.locator('.expense', { hasText: '宴会' })).toContainText('6人 各¥1,144 / Aさん ¥1,146 · 受取済み: Bさん')
+
+  // 品目別: 7人以上なら対象者は要約。押すと名前ボタンが開く (同時に1品目)
+  await f.getByPlaceholder('例: 食事代').fill('買い出し')
+  await f.getByRole('radio', { name: '品目', exact: true }).click()
+  for (let n = 0; n < 2; n++) await f.getByRole('button', { name: '品目を追加' }).click()
+  const first = f.getByRole('button', { name: /^1行目の対象者/ })
+  const second = f.getByRole('button', { name: /^2行目の対象者/ })
+  await expect(first).toHaveText('全員 (8人)')
+  await expect(f.getByRole('button', { name: 'Cさんだけ' })).toHaveCount(0)
+  await first.click()
+  await f.getByRole('button', { name: 'Cさんだけ' }).click()
+  await f.getByRole('button', { name: 'Dさん', exact: true }).click()
+  await f.getByRole('button', { name: 'Eさん', exact: true }).click()
+  await expect(first).toHaveText('Cさん・Dさん ほか1人')
+  await second.click()
+  await expect(first).toHaveAttribute('aria-expanded', 'false')
+})
+
 
 test('削除した支払いは「削除済み」から元に戻す・完全に削除できる', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
