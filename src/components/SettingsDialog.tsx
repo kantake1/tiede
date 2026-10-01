@@ -44,6 +44,9 @@ export function SettingsDialog({ ref, data, store, tripId, run, onDeleteEvent }:
         onRename={(id, name) => run(store.renameCategory(tripId, id, name))}
         onRemove={onDeleteEvent}
       />
+      <p className="muted small settings-foot">
+        <a href="/privacy">プライバシーポリシー</a>
+      </p>
     </dialog>
   )
 }

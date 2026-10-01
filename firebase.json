@@ -16,6 +16,10 @@
       {
         "source": "/t/**",
         "destination": "/index.html"
+      },
+      {
+        "source": "/privacy",
+        "destination": "/index.html"
       }
     ],
     "headers": [
@@ -56,6 +60,15 @@
       },
       {
         "source": "/t/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      },
+      {
+        "source": "/privacy",
         "headers": [
           {
             "key": "Cache-Control",
