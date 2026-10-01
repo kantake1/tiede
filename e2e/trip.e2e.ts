@@ -205,6 +205,39 @@ test('受取済みの人はその支払いの精算から外れる', async ({ pa
   await expect(page.locator('.transfers li')).toHaveText([/Cさん.*Aさん.*1,000/])
 })
 
+test('一覧のコンパクト表示: 1件1行で、押すとその1件だけ開く', async ({ page }) => {
+  await page.goto('/')
+  await page.getByPlaceholder('例: いつものメンバー').fill('表示')
+  await page.getByLabel('追加するメンバーの名前').fill('Aさん, Bさん')
+  await page.locator('button[type="submit"]').click()
+  await page.waitForURL(/\/t\/.+/)
+
+  const f = form(page)
+  for (const title of ['昼食', '夕食']) {
+    await f.getByPlaceholder('例: 食事代').fill(title)
+    await f.getByPlaceholder('12000').fill('2000')
+    await f.getByRole('button', { name: '追加', exact: true }).click()
+    await expect(page.locator('.expense', { hasText: title })).toBeVisible()
+  }
+  const edit = page.locator('.expense').getByRole('button', { name: '編集' })
+  await expect(edit).toHaveCount(2) // 初めはフル
+
+  await page.getByRole('radio', { name: 'コンパクト' }).click()
+  await expect(edit).toHaveCount(0)
+  await expect(page.locator('.expense', { hasText: '昼食' })).not.toContainText('Bさん ¥1,000')
+  const lunch = page.getByRole('button', { name: /昼食/ })
+  await lunch.click()
+  await expect(lunch).toHaveAttribute('aria-expanded', 'true')
+  await expect(edit).toHaveCount(1)
+  await page.getByRole('button', { name: /夕食/ }).click() // 開くのは1件だけ
+  await expect(lunch).toHaveAttribute('aria-expanded', 'false')
+  await expect(edit).toHaveCount(1)
+
+  await page.reload() // 選んだ表示は端末に記憶する
+  await expect(page.getByRole('radio', { name: 'コンパクト' })).toHaveAttribute('aria-checked', 'true')
+  await expect(edit).toHaveCount(0)
+})
+
 
 test('削除した支払いは「削除済み」から元に戻す・完全に削除できる', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })

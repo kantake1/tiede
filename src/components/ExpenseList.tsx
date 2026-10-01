@@ -1,6 +1,8 @@
-import { Check, ChevronRight, ReceiptText } from 'lucide-react'
+import { Check, ChevronRight, ChevronUp, ReceiptText } from 'lucide-react'
+import { useState } from 'react'
 import { formatDate, groupByDate } from '../lib/date'
 import { yen } from '../lib/format'
+import { loadFlag, saveFlag } from '../lib/storage'
 import { settledOf } from '../lib/settle'
 import { computeOwed } from '../lib/split'
 import type { Expense } from '../types'
@@ -20,16 +22,49 @@ type Props = {
 
 const MODE_LABEL = { equal: '均等', ratio: '比率', amount: '金額指定', items: '品目別' } as const
 
+// 一覧の表示 (コンパクト / フル) を端末に記憶する
+const COMPACT_KEY = 'tiede:list-compact'
+
 export function ExpenseList({ expenses, nameOf, memberIds, categoryOf, editingId, onEdit, onDelete, onShowReceipt }: Props) {
+  const [compact, setCompact] = useState(() => loadFlag(COMPACT_KEY))
+  // コンパクトで開いている1件
+  const [openId, setOpenId] = useState<string | null>(null)
   if (expenses.length === 0) return null
   // 削除済みメンバーは末尾
   const order = (id: string) => {
     const i = memberIds.indexOf(id)
     return i < 0 ? memberIds.length : i
   }
+  const choose = (next: boolean) => {
+    setCompact(next)
+    saveFlag(COMPACT_KEY, next)
+  }
+  const receiptButton = (e: Expense) => (
+    <button className="receipt-mark" onClick={() => onShowReceipt(e)} aria-label={`${e.title} のレシートを表示`} title="レシートを表示">
+      <ReceiptText size={16} />
+    </button>
+  )
   return (
     <section className="card">
-      <h2>支払い一覧 ({expenses.length}件)</h2>
+      <div className="row card-head">
+        <h2 className="grow">支払い一覧 ({expenses.length}件)</h2>
+        <div className="segmented" role="radiogroup" aria-label="一覧の表示">
+          {[
+            { value: true, label: 'コンパクト' },
+            { value: false, label: 'フル' },
+          ].map((o) => (
+            <button
+              key={o.label}
+              role="radio"
+              aria-checked={compact === o.value}
+              className={compact === o.value ? 'active' : ''}
+              onClick={() => choose(o.value)}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      </div>
       <ul className="list">
         {groupByDate(expenses).flatMap(([date, list]) => [
           <li key={date} className="date-head">
@@ -40,32 +75,51 @@ export function ExpenseList({ expenses, nameOf, memberIds, categoryOf, editingId
             const owed = computeOwed(e)
             const settled = settledOf(e)
             const settledCount = Object.keys(settled).length
+            const category = categoryOf(e.categoryId)
+            const open = !compact || openId === e.id
+            const meta = (
+              <>
+                {MODE_LABEL[e.mode]}
+                {settledCount > 0 && ` · 受取済み ${settledCount}人`}
+              </>
+            )
             return (
-              <li key={e.id} className={`expense ${e.id === editingId ? 'editing' : ''}`}>
-                <div className="row">
-                  <div className="grow">
-                    <div className="expense-title">
-                      {e.title}
-                      {categoryOf(e.categoryId) && <span className="chip small-chip">{categoryOf(e.categoryId)}</span>}
-                      {e.hasReceipt && (
-                        <button
-                          className="receipt-mark"
-                          onClick={() => onShowReceipt(e)}
-                          aria-label={`${e.title} のレシートを表示`}
-                          title="レシートを表示"
-                        >
-                          <ReceiptText size={16} />
-                        </button>
-                      )}
+              <li key={e.id} className={`expense ${e.id === editingId ? 'editing' : ''} ${compact && open ? 'open' : ''}`}>
+                {compact ? (
+                  <>
+                    <button className="c-row" aria-expanded={open} onClick={() => setOpenId(open ? null : e.id)}>
+                      <span className="c-title">{e.title}</span>
+                      <span className="c-payer">{nameOf(e.payerId)}</span>
+                      <span className="grow" />
+                      {e.hasReceipt && <ReceiptText size={16} className="muted" aria-label="レシートあり" />}
+                      {settledCount > 0 && <Check size={16} className="paid" aria-label="受取済みあり" />}
+                      <span className="expense-amount">{yen(e.amount)}</span>
+                      {open && <ChevronUp size={16} className="muted" />}
+                    </button>
+                    {open && (
+                      <div className="muted small c-meta">
+                        {category && <span className="chip small-chip">{category}</span>}
+                        {meta}
+                        {e.hasReceipt && receiptButton(e)}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="row">
+                    <div className="grow">
+                      <div className="expense-title">
+                        {e.title}
+                        {category && <span className="chip small-chip">{category}</span>}
+                        {e.hasReceipt && receiptButton(e)}
+                      </div>
+                      <div className="muted small">
+                        {nameOf(e.payerId)} が立替 · {meta}
+                      </div>
                     </div>
-                    <div className="muted small">
-                      {nameOf(e.payerId)} が立替 · {MODE_LABEL[e.mode]}
-                      {settledCount > 0 && ` · 受取済み ${settledCount}人`}
-                    </div>
+                    <div className="expense-amount">{yen(e.amount)}</div>
                   </div>
-                  <div className="expense-amount">{yen(e.amount)}</div>
-                </div>
-                {e.items && e.items.length > 0 && (
+                )}
+                {open && e.items && e.items.length > 0 && (
                   <details className="small">
                     <summary>
                       <ChevronRight size={14} className="chevron" /> 品目 ({e.items.length})
@@ -81,29 +135,31 @@ export function ExpenseList({ expenses, nameOf, memberIds, categoryOf, editingId
                     </ul>
                   </details>
                 )}
-                {e.memo && <p className="memo">{e.memo}</p>}
-                <div className="row">
-                  <div className="grow muted small">
-                    {Object.entries(owed)
-                      .filter(([, v]) => v > 0)
-                      .sort(([a], [b]) => order(a) - order(b))
-                      .map(([id, v], i) => (
-                        <span key={id}>
-                          {i > 0 && ' / '}
-                          <span className={`owed-item ${settled[id] ? 'paid' : ''}`}>
-                            {settled[id] && <Check size={12} aria-label="受取済み" />}
-                            {nameOf(id)} {yen(v)}
+                {open && e.memo && <p className="memo">{e.memo}</p>}
+                {open && (
+                  <div className="row">
+                    <div className="grow muted small">
+                      {Object.entries(owed)
+                        .filter(([, v]) => v > 0)
+                        .sort(([a], [b]) => order(a) - order(b))
+                        .map(([id, v], i) => (
+                          <span key={id}>
+                            {i > 0 && ' / '}
+                            <span className={`owed-item ${settled[id] ? 'paid' : ''}`}>
+                              {settled[id] && <Check size={12} aria-label="受取済み" />}
+                              {nameOf(id)} {yen(v)}
+                            </span>
                           </span>
-                        </span>
-                      ))}
+                        ))}
+                    </div>
+                    <button className="ghost small" onClick={() => onEdit(e)}>
+                      編集
+                    </button>
+                    <button className="ghost small danger" onClick={() => onDelete(e)}>
+                      削除
+                    </button>
                   </div>
-                  <button className="ghost small" onClick={() => onEdit(e)}>
-                    編集
-                  </button>
-                  <button className="ghost small danger" onClick={() => onDelete(e)}>
-                    削除
-                  </button>
-                </div>
+                )}
               </li>
             )
           }),
