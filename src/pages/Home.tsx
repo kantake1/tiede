@@ -136,6 +136,9 @@ export function Home() {
           <button type="submit" className="primary" disabled={busy}>
             {busy ? '作成中…' : '作成'}
           </button>
+          <p className="muted small">
+            作成すると共有用の URL が発行されます。URL を知っている人は誰でも閲覧・編集・削除できるので、メンバー以外には教えないでください。
+          </p>
         </form>
       </section>
 

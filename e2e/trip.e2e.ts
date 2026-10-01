@@ -140,7 +140,16 @@ test('品目別: 全員の品目は名前を1回押すとその人だけにな�
   await expect(page.locator('.expense', { hasText: 'スーパー' })).toContainText('Aさん ¥1,400')
 })
 
-test('タブレット幅: 再度読み取るの確認をキャンセルできる', async ({ page }) => {
+test('プライバシーポリシー: 作成画面の注意書きとフッターから開ける', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByText('URL を知っている人は誰でも閲覧・編集・削除できる')).toBeVisible()
+  await page.getByRole('link', { name: 'プライバシーポリシー' }).click()
+  await page.waitForURL('/privacy')
+  await expect(page.getByRole('heading', { name: 'プライバシーポリシー' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'tiede@tuta.com' })).toHaveAttribute('href', 'mailto:tiede@tuta.com')
+})
+
+test('タブレット幅: レシートは初回だけ確認してから読み取り、再度読み取るの確認をキャンセルできる', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 768 })
   // 読み取り (Gemini) は外部へ出さずに失敗させる。写真は保存されるので「再度読み取る」が出る
   await page.route(/^https?:\/\/(?!localhost|127\.0\.0\.1)/, (r) => r.abort())
@@ -154,8 +163,18 @@ test('タブレット幅: 再度読み取るの確認をキャンセルできる
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
     'base64',
   )
-  await form(page).locator('.receipt input[type="file"]').setInputFiles({ name: 'r.png', mimeType: 'image/png', buffer: png })
+  // 初回は Gemini に送ることを確認する。確認の「読み取る」が写真選択になっている
+  await form(page).getByRole('button', { name: 'レシートを読み取る' }).click()
+  const consent = page.getByRole('alertdialog', { name: 'レシートの読み取りについて' })
+  await expect(consent).toContainText('AI の学習に使われることはありません')
+  await expect(consent.getByRole('link', { name: 'プライバシーポリシー' })).toHaveAttribute('href', '/privacy')
+  await consent.locator('input[type="file"]').setInputFiles({ name: 'r.png', mimeType: 'image/png', buffer: png })
+  await expect(consent).toBeHidden()
+  expect(await page.evaluate(() => localStorage.getItem('tiede:receipt-ai-consent'))).toBe('1')
+
+  // 確認済みなので、再度読み取るの確認に Gemini の説明は出ない
   await form(page).getByRole('button', { name: '再度読み取る' }).click()
+  await expect(page.getByRole('alertdialog')).not.toContainText('Gemini')
   await page.getByRole('alertdialog').getByRole('button', { name: 'キャンセル' }).click()
   await expect(page.getByRole('alertdialog')).toBeHidden()
 })
