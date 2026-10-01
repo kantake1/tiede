@@ -59,7 +59,7 @@
 
 - 読む量の多い作業 (全体レビュー、画面確認、通しテスト、文書更新) は `agy -p "<指示>" --model gemini-3.8-flash-{high|medium} --output-format json --json-schema <schema>` に任せ、Claude は照合・修正・コミットを担う
 - 指摘は必ずコードで確かめてから直す (誤った指摘が混ざる)。コマンド実行やファイル操作をさせるときは `--dangerously-skip-permissions`、作業前に git をきれいにしておく
-- 動作確認・通しテストは `npm run dev:emulator` (Firestore エミュレータ、`.env.emulator`) に対して行い、本番にテスト用データを作らない。`npm run dev` は本番に接続する
+- 動作確認・通しテストは `npm run dev:emulator` (Firestore エミュレータ、`.env.emulator`) に対して行い、本番にテスト用データを作らない。起動時に `scripts/seed.mjs` が固定 ID のテスト用グループ (`/t/testtrip` 3人・`/t/testlarge` 12人・`/t/testempty` 空) を入れ直す (途中で戻すときは `npm run seed`)。`npm run dev` は本番に接続する
 - 通しテストは `e2e/trip.e2e.ts` (デスクトップ) と `e2e/mobile.e2e.ts` (iPhone・Android の画面サイズ) (`npm run e2e`)。プルリクエストでは GitHub Actions がテスト一式とプレビュー公開を行い、`main` へのマージで本番に公開する (`.github/workflows/ci.yml`)
 
 ## コマンド

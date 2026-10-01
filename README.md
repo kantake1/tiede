@@ -29,6 +29,7 @@
 npm install      # 依存関係のインストール
 npm run dev      # 開発サーバー起動 (.env.local があれば本番の Firestore に接続)
 npm run dev:emulator  # Firestore エミュレータに接続して開発サーバー起動 (本番に触れない。動作確認・通しテストはこちら)
+                      # 起動のたびに同じテスト用グループを入れる。URL は起動時に表示 (scripts/seed.mjs)
 npm test         # テスト実行 (vitest)
 npm run test:rules    # セキュリティルールのテスト (エミュレータを起動して実行)
 npm run e2e           # 通しテスト (Playwright。エミュレータを起動して実行。初回は npx playwright install chromium)
