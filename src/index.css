@@ -397,6 +397,61 @@ summary {
   font-variant-numeric: tabular-nums;
 }
 
+.card-head .segmented button {
+  padding: 4px 10px;
+  font-size: 0.85rem;
+}
+
+/* 一覧のコンパクト表示: 1件1行。押すとその1件だけ開く */
+button.c-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font-weight: 400;
+}
+
+.c-title {
+  min-width: 0;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.c-payer {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.c-row .paid {
+  color: var(--plus);
+}
+
+.c-meta .small-chip {
+  margin: 0 6px 0 0;
+}
+
+.list > li.expense:has(> .c-row) {
+  padding: 2px 0;
+}
+
+.list > li.expense.open {
+  margin: 4px -8px;
+  padding: 2px 8px 8px;
+  border-bottom: none;
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.list > li.expense.open > .c-row:hover {
+  background: transparent;
+}
+
 /* 支払いフォーム */
 .expense-form {
   scroll-margin-top: 16px;
