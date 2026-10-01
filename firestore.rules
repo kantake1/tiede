@@ -12,38 +12,62 @@ service cloud.firestore {
       return s is string && s.size() > 0 && s.size() <= max;
     }
 
+    // 削除の猶予。URL が漏れて荒らされても、この間は誰でも元に戻せる
+    function expired(t) {
+      return t is timestamp && request.time > t + duration.value(7, 'd');
+    }
+
+    // 時刻の項目は変えないか、消すか、サーバー時刻 (serverTimestamp) にする。端末の時刻で猶予を縮められないように
+    function stamped(field) {
+      return request.resource.data.get(field, null) == resource.data.get(field, null)
+        || !(field in request.resource.data)
+        || request.resource.data[field] == request.time;
+    }
+
+    // グループの削除予約から猶予が過ぎた (または既に無い)。中身をまとめて消してよい
+    function tripPurgeable(tripId) {
+      let path = /databases/$(database)/documents/trips/$(tripId);
+      return !exists(path) || expired(get(path).data.get('deleteRequestedAt', null));
+    }
+
     match /trips/{tripId} {
       allow get: if true;
-      allow list, delete: if false;
+      allow list: if false;
+      allow delete: if expired(resource.data.get('deleteRequestedAt', null));
       allow create: if request.resource.data.keys().hasOnly(['name', 'createdAt'])
         && validName(request.resource.data.name, 100)
         && request.resource.data.createdAt == request.time;
-      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])
-        && validName(request.resource.data.name, 100);
+      // deleteRequestedAt: 削除予約。誰でも予約・取り消しでき、猶予が過ぎたら中身ごと削除できる
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'deleteRequestedAt'])
+        && validName(request.resource.data.name, 100)
+        && stamped('deleteRequestedAt');
 
+      // メンバー・イベントは削除しても removedAt を付けるだけ (論理削除)。実際の削除はグループごと消すときだけ
       match /members/{memberId} {
-        allow read, delete: if true;
+        allow read: if true;
+        allow delete: if tripPurgeable(tripId);
         allow create: if request.resource.data.keys().hasOnly(['name', 'createdAt'])
           && validName(request.resource.data.name, 50)
           && (tripExists(tripId) || existsAfter(/databases/$(database)/documents/trips/$(tripId)));
-        // removedAt: 論理削除の印 (#42 の移行期間。旧版の削除 (delete) もまだ許す)
         allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'removedAt'])
           && validName(request.resource.data.name, 50)
-          && (!('removedAt' in request.resource.data) || request.resource.data.removedAt is timestamp);
+          && stamped('removedAt');
       }
 
       match /categories/{categoryId} {
-        allow read, delete: if true;
+        allow read: if true;
+        allow delete: if tripPurgeable(tripId);
         allow create: if request.resource.data.keys().hasOnly(['name', 'createdAt'])
           && validName(request.resource.data.name, 50)
           && tripExists(tripId);
         allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'archived', 'removedAt'])
           && validName(request.resource.data.name, 50)
-          && (!('removedAt' in request.resource.data) || request.resource.data.removedAt is timestamp)
+          && stamped('removedAt')
           && (!('archived' in request.resource.data) || request.resource.data.archived is bool);
       }
 
-      // レシート写真 (支払いと同じ ID)。JPEG の base64 で約300KB (文字数 41万) まで
+      // レシート写真 (支払いと同じ ID)。JPEG の base64 で約300KB (文字数 41万) まで。
+      // 上書きで消せるため、削除だけ制限しても意味がない (支払いの編集で写真を外すときにも消す)
       match /receipts/{expenseId} {
         allow read, delete: if true;
         allow create, update: if request.resource.data.keys().hasOnly(['data', 'createdAt'])
@@ -71,10 +95,25 @@ service cloud.firestore {
             && (!('trashedAt' in d) || d.trashedAt is timestamp);
         }
 
-        allow read, delete: if true;
-        allow create: if validExpense(request.resource.data) && tripExists(tripId);
+        // 「削除済み」へ移すとき (deletedAt を付ける・変える) は trashedAt にサーバー時刻を入れる。
+        // 戻すときは両方消す。trashedAt だけ消して猶予を飛ばすことはできない
+        function validTrash(d) {
+          return (!('deletedAt' in d) && !('trashedAt' in d))
+            || ('deletedAt' in d && (
+              (d.deletedAt == resource.data.get('deletedAt', null) && d.get('trashedAt', null) == resource.data.get('trashedAt', null))
+              || d.get('trashedAt', null) == request.time));
+        }
+
+        allow read: if true;
+        // 完全な削除は「削除済み」に移して猶予が過ぎたものだけ。
+        // trashedAt の無い削除済みは、このルールより前に削除したもの (新しくは作れない)
+        allow delete: if ('deletedAt' in resource.data && (!('trashedAt' in resource.data) || expired(resource.data.trashedAt)))
+          || tripPurgeable(tripId);
+        allow create: if validExpense(request.resource.data) && tripExists(tripId)
+          && (!('trashedAt' in request.resource.data) || request.resource.data.trashedAt == request.time);
         allow update: if validExpense(request.resource.data)
-          && request.resource.data.createdAt == resource.data.createdAt;
+          && request.resource.data.createdAt == resource.data.createdAt
+          && validTrash(request.resource.data);
       }
     }
   }
