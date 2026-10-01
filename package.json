@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:emulator": "firebase emulators:exec --only firestore --project demo-tiede 'vite --mode emulator'",
+    "dev:phone": "firebase emulators:exec --only firestore --project demo-tiede 'vite --mode emulator --host'",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
