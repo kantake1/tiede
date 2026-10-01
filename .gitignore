@@ -28,3 +28,6 @@ dist-ssr
 # Playwright
 test-results
 playwright-report
+
+# Claude Code の作業ツリー (スキルの .claude/skills は共有する)
+.claude/worktrees/
