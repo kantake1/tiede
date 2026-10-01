@@ -20,6 +20,20 @@
   --shadow-float: rgb(0 0 0 / 0.02) 0 0 0 1px, rgb(0 0 0 / 0.04) 0 2px 6px 0, rgb(0 0 0 / 0.1) 0 4px 8px 0;
   --notice: #fff8e6;
   --notice-border: #f2d68a;
+  /* ガラス (Liquid Glass)。層は 奥=凹み / 中=板 / 手前=部品 の3つ。DESIGN.md「ガラス」 */
+  --glass: rgb(255 255 255 / 0.72);
+  --glass-hover: rgb(255 255 255 / 0.92);
+  --glass-thumb: rgb(255 255 255 / 0.72);
+  --glass-blur: 20px;
+  --glass-line: rgb(0 0 0 / 0.06);
+  --glass-edge: rgb(255 255 255 / 0.7);
+  --glass-shadow: 0 6.4px 25.6px rgb(0 0 0 / 0.08), 0 0.8px 1.6px rgb(0 0 0 / 0.04);
+  --glass-shadow-sm: 0 0.8px 1.6px rgb(0 0 0 / 0.07), 0 1.6px 4.8px rgb(0 0 0 / 0.05);
+  --glass-shadow-xs: 0 0.8px 1.6px rgb(0 0 0 / 0.1), 0 0 0.8px rgb(0 0 0 / 0.06);
+  --glass-accent: rgb(255 56 92 / 0.9);
+  --well: rgb(0 0 0 / 0.045);
+  --well-shadow: inset 0 1px 2px rgb(0 0 0 / 0.08), inset 0 0 0 0.5px rgb(0 0 0 / 0.035);
+  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236a6a6a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   color-scheme: light;
   font-family: Inter, -apple-system, system-ui, 'Hiragino Sans', 'Noto Sans JP', Roboto, 'Helvetica Neue', sans-serif;
   line-height: 1.5;
@@ -44,7 +58,34 @@
     --danger: #ff7a5c;
     --notice: #2d2716;
     --notice-border: #6b5a24;
+    --glass: rgb(30 30 30 / 0.7);
+    --glass-hover: rgb(60 60 60 / 0.8);
+    --glass-thumb: rgb(80 80 80 / 0.7);
+    --glass-line: rgb(255 255 255 / 0.08);
+    --glass-edge: rgb(255 255 255 / 0.16);
+    --glass-shadow: 0 6.4px 25.6px rgb(0 0 0 / 0.4), 0 0.8px 1.6px rgb(0 0 0 / 0.3);
+    --glass-shadow-sm: 0 0.8px 1.6px rgb(0 0 0 / 0.4), 0 1.6px 4.8px rgb(0 0 0 / 0.3);
+    --glass-shadow-xs: 0 0.8px 1.6px rgb(0 0 0 / 0.5);
+    --well: rgb(0 0 0 / 0.3);
+    --well-shadow: inset 0 1px 2px rgb(0 0 0 / 0.45), inset 0 0 0 0.5px rgb(255 255 255 / 0.04);
+    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
     color-scheme: dark;
+  }
+}
+
+/* 透明度を下げる設定・ぼかし非対応では、ガラスを不透明な面に戻す */
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --glass: var(--card);
+    --glass-thumb: var(--card);
+    --glass-blur: 0px;
+  }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root {
+    --glass: var(--card);
+    --glass-thumb: var(--card);
   }
 }
 
@@ -54,7 +95,7 @@
 
 body {
   margin: 0;
-  background: var(--bg);
+  background: var(--surface-soft);
   color: var(--text);
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
@@ -108,10 +149,23 @@ a {
   color: var(--text);
 }
 
+/* ガラスの板 (中の層): カード・サイドバー・見出し・シート・通知・ダイアログ */
+.card,
+.sidebar,
+.apphead,
+.topbar,
+.toast,
+.modal,
+dialog.settings {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  border: 0.5px solid var(--glass-line);
+  box-shadow: inset 0 0.5px 0 var(--glass-edge), var(--glass-shadow);
+}
+
 .card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 20px;
   padding: 16px;
   margin: 16px 0;
 }
@@ -161,43 +215,63 @@ button {
   color: inherit;
 }
 
+/* 入力欄は板に彫った凹み (奥の層)。外側には何も付けない */
 input:not([type='checkbox']),
 select,
 textarea {
   width: 100%;
   min-height: 44px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--card);
+  padding: 10px 13px;
+  border: none;
+  border-radius: 14px;
+  background: var(--well);
+  box-shadow: var(--well-shadow);
   font-size: 16px;
   font-weight: 400;
 }
 
+/* 端末の矢印は右端に寄るため、自前の矢印を左の余白と同じ 13px 内側に置く */
+select {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 40px;
+  background-image: var(--chevron);
+  background-repeat: no-repeat;
+  background-position: right 13px center;
+  background-size: 16px;
+}
+
 input:focus,
 select:focus,
-textarea:focus {
-  outline: none;
-  border-color: var(--text);
-  box-shadow: 0 0 0 1px var(--text);
+textarea:focus,
+button:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
 }
 
 ::placeholder {
   color: var(--muted-soft);
 }
 
+/* ボタンは板の上の部品 (手前の層): 同じガラスで影を小さく */
 button {
   padding: 8px 14px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--card);
+  border: 0.5px solid var(--glass-line);
+  border-radius: 14px;
+  background: var(--glass);
+  box-shadow: inset 0 0.5px 0 var(--glass-edge), var(--glass-shadow-sm);
   cursor: pointer;
   white-space: nowrap;
   font-weight: 500;
+  transition: transform 0.12s;
 }
 
 button:hover {
-  background: var(--surface-soft);
+  background: var(--glass-hover);
+}
+
+button:not(:disabled):active {
+  transform: scale(0.98);
 }
 
 button:disabled {
@@ -208,8 +282,9 @@ button:disabled {
 /* 主要操作だけが Rausch を使う */
 button.primary {
   min-height: 48px;
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--glass-accent);
+  border-color: rgb(255 255 255 / 0.28);
+  box-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.45), var(--glass-shadow-sm);
   color: var(--accent-text);
   font-weight: 600;
 }
@@ -217,14 +292,14 @@ button.primary {
 button.primary:hover,
 button.primary:active {
   background: var(--accent-active);
-  border-color: var(--accent-active);
 }
 
 /* 淡いピンクに白文字では読めないため、無効時は灰色の面と薄墨の文字にする */
 button.primary:disabled {
   opacity: 1;
   background: var(--surface-strong);
-  border-color: var(--surface-strong);
+  border-color: transparent;
+  box-shadow: none;
   color: var(--muted);
 }
 
@@ -232,6 +307,7 @@ button.primary:disabled {
 button.ghost {
   border-color: transparent;
   background: transparent;
+  box-shadow: none;
   color: var(--text);
 }
 
@@ -276,7 +352,9 @@ button.danger {
 }
 
 .chip {
-  background: var(--surface-strong);
+  background: var(--glass);
+  border: 0.5px solid var(--glass-line);
+  box-shadow: inset 0 0.5px 0 var(--glass-edge), var(--glass-shadow-xs);
   border-radius: 999px;
   padding: 2px 10px;
   font-size: 0.85rem;
@@ -305,7 +383,7 @@ button.danger {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .transfers li {
@@ -313,8 +391,10 @@ button.danger {
   grid-template-columns: auto auto 1fr auto;
   align-items: center;
   gap: 8px;
-  background: var(--surface-soft);
-  border-radius: 12px;
+  background: var(--glass);
+  border: 0.5px solid var(--glass-line);
+  box-shadow: inset 0 0.5px 0 var(--glass-edge), var(--glass-shadow-sm);
+  border-radius: 14px;
   padding: 12px 16px;
   font-size: 1.05rem;
 }
@@ -397,8 +477,14 @@ summary {
   font-variant-numeric: tabular-nums;
 }
 
+.card-head .segmented {
+  padding: 3px;
+  border-radius: 11px;
+}
+
 .card-head .segmented button {
   padding: 4px 10px;
+  border-radius: 8px;
   font-size: 0.85rem;
 }
 
@@ -411,7 +497,9 @@ button.c-row {
   min-height: 44px;
   padding: 6px 0;
   border: none;
+  border-radius: 0;
   background: transparent;
+  box-shadow: none;
   text-align: left;
   font-weight: 400;
 }
@@ -466,23 +554,30 @@ button.c-row {
   font-size: 0.9rem;
 }
 
+/* 切替: 枠は凹み (奥)、選択中のつまみだけ手前のガラス。角丸は同心 (枠 = つまみ + 余白) */
 .segmented {
   display: inline-flex;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--well);
+  box-shadow: var(--well-shadow);
 }
 
 .segmented button {
-  border: none;
-  border-radius: 0;
+  border: 0.5px solid transparent;
+  border-radius: 10px;
   padding: 6px 12px;
   background: transparent;
+  box-shadow: none;
+  color: var(--muted);
 }
 
 .segmented button.active {
-  background: var(--text);
-  color: var(--card);
+  background: var(--glass-thumb);
+  border-color: var(--glass-line);
+  box-shadow: inset 0 0.5px 0 var(--glass-edge), var(--glass-shadow-xs);
+  color: var(--text);
+  font-weight: 600;
 }
 
 .participants {
@@ -534,8 +629,6 @@ button.c-row {
 
 /* イベント */
 .chip.toggle {
-  border: 1px solid var(--border);
-  background: transparent;
   color: var(--muted);
   padding: 4px 12px;
 }
@@ -549,8 +642,9 @@ button.c-row {
 
 /* 品目が全員のときの名前: 押すと「その人だけ」になる */
 .chip.toggle.pick {
-  border-style: dashed;
-  border-color: var(--border-strong);
+  border: 1px dashed var(--border-strong);
+  box-shadow: none;
+  background: transparent;
   color: var(--body);
 }
 
@@ -576,15 +670,17 @@ button.c-row {
 label.button {
   display: inline-block;
   padding: 10px 16px;
-  border: 1px solid var(--text);
-  border-radius: 8px;
+  border: 0.5px solid var(--glass-line);
+  border-radius: 14px;
+  background: var(--glass);
+  box-shadow: inset 0 0.5px 0 var(--glass-edge), var(--glass-shadow-sm);
   color: var(--text);
   font-weight: 600;
   cursor: pointer;
 }
 
 label.button:hover {
-  background: var(--surface-soft);
+  background: var(--glass-hover);
 }
 
 label.button.disabled {
@@ -673,8 +769,7 @@ label.button.disabled {
   align-items: center;
   justify-content: center;
   padding: 0 20px;
-  background: var(--card);
-  border-bottom: 1px solid var(--border);
+  border-width: 0 0 0.5px;
 }
 
 /* 同期状態は見出しの右端に */
@@ -714,21 +809,22 @@ label.button.disabled {
 }
 
 .layout.collapsed {
-  --sb: 56px;
+  --sb: 68px;
 }
 
+/* サイドバーは画面端から 12px 離した浮いた板 */
 .sidebar {
   grid-area: side;
   position: sticky;
-  top: var(--head-h);
-  height: calc(100vh - var(--head-h));
-  height: calc(100dvh - var(--head-h));
+  top: calc(var(--head-h) + 12px);
+  height: calc(100vh - var(--head-h) - 24px);
+  height: calc(100dvh - var(--head-h) - 24px);
+  margin: 12px 0 12px 12px;
   display: flex;
   flex-direction: column;
   gap: 12px;
   padding: 16px 12px;
-  background: var(--card);
-  border-right: 1px solid var(--border);
+  border-radius: 20px;
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -765,8 +861,14 @@ label.button.disabled {
   background: var(--surface-soft);
 }
 
+.sb-cats label.on,
+.sb-foot button.sb-item {
+  background: var(--glass);
+  box-shadow: inset 0 0.5px 0 var(--glass-edge), var(--glass-shadow-sm);
+}
+
 .sb-cats label.on {
-  background: var(--surface-strong);
+  border-radius: 12px;
   font-weight: 600;
 }
 
@@ -795,13 +897,36 @@ button.sb-item {
 }
 
 button.sb-item:hover {
-  background: var(--surface-soft);
+  background: var(--glass-hover);
   text-decoration: none;
+}
+
+.sb-foot button.sb-item {
+  border-color: var(--glass-line);
 }
 
 button.sb-item.on {
   background: var(--surface-strong);
   font-weight: 600;
+}
+
+/* 格納ボタン: 他のボタンと同じ手前の部品 (正方形) */
+button.sb-collapse {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border-color: var(--glass-line);
+  background: var(--glass);
+  box-shadow: inset 0 0.5px 0 var(--glass-edge), var(--glass-shadow-sm);
+}
+
+button.sb-collapse:hover {
+  background: var(--glass-hover);
+  text-decoration: none;
 }
 
 /* 削除済みの一覧: 支払い一覧と同じ行の形で、内容と金額を淡く */
@@ -847,7 +972,6 @@ button.icon {
   grid-area: form;
   position: relative;
   padding: 0 16px;
-  border-right: 1px solid var(--border);
 }
 
 .col-form .card > .row:first-child {
@@ -872,7 +996,7 @@ button.icon {
   min-width: 0;
 }
 
-.col-list > .card:first-child,
+.col-list > :first-child,
 .col-form > :first-child {
   margin-top: 16px;
 }
@@ -922,9 +1046,7 @@ dialog.settings {
   width: min(560px, calc(100vw - 32px));
   max-height: calc(100vh - 32px);
   max-height: calc(100dvh - 32px);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--bg);
+  border-radius: 20px;
   color: var(--text);
   padding: 16px;
 }
@@ -951,13 +1073,12 @@ dialog.settings::backdrop {
 
   .sidebar {
     position: fixed;
-    inset: 0 auto 0 0;
+    inset: calc(8px + env(safe-area-inset-top)) auto calc(8px + env(safe-area-inset-bottom)) 8px;
     height: auto;
-    padding-top: calc(16px + env(safe-area-inset-top));
-    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    margin: 0;
     width: min(280px, 85vw);
     z-index: 30;
-    transform: translateX(-100%);
+    transform: translateX(calc(-100% - 16px));
     transition: transform 0.2s ease;
   }
 
@@ -999,8 +1120,7 @@ dialog.settings::backdrop {
     top: 0;
     z-index: 10;
     padding: calc(8px + env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) 8px max(8px, env(safe-area-inset-left));
-    background: var(--card);
-    border-bottom: 1px solid var(--border);
+    border-width: 0 0 0.5px;
   }
 
   .topbar-title {
@@ -1036,15 +1156,21 @@ dialog.settings::backdrop {
     border: none;
   }
 
+  /* 入力画面は画面端から 8px 離したガラスの板。中のカードは板を重ねない */
   .layout.sheet-open .col-form {
     display: block;
     position: fixed;
-    inset: 0;
+    inset: calc(8px + env(safe-area-inset-top)) 8px calc(8px + env(safe-area-inset-bottom));
     z-index: 25;
     overflow-y: auto;
     overscroll-behavior: contain;
-    background: var(--bg);
-    padding: env(safe-area-inset-top) max(12px, env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+    padding: 0 8px 16px;
+    border-radius: 20px;
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+    backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+    border: 0.5px solid var(--glass-line);
+    box-shadow: inset 0 0.5px 0 var(--glass-edge), var(--glass-shadow);
   }
 
   .layout.sheet-open .col-form > .card {
@@ -1052,6 +1178,10 @@ dialog.settings::backdrop {
     max-height: none;
     overflow: visible;
     border: none;
+    background: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
     padding-inline: 4px;
   }
 
@@ -1070,13 +1200,15 @@ dialog.settings::backdrop {
   .fab {
     display: flex;
     position: fixed;
-    right: 16px;
-    bottom: calc(16px + env(safe-area-inset-bottom));
+    right: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom));
     width: 56px;
     height: 56px;
     border-radius: 50%;
     font-size: 1.6rem;
-    box-shadow: var(--shadow-float);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+    backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+    box-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.45), var(--glass-shadow);
     z-index: 15;
   }
 
@@ -1242,14 +1374,23 @@ body.resizing .layout {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 8px 10px 16px;
-  border-radius: 12px;
-  background: var(--text);
-  color: var(--card);
-  box-shadow: var(--shadow-float);
+  min-height: 56px;
+  padding: 8px 6px 8px 16px;
+  border-radius: 20px;
+  color: var(--text);
   font-size: 0.9rem;
   pointer-events: auto;
   animation: toast-in 0.2s ease;
+}
+
+/* 通知は内容の上に重なるため、地を濃くして背後の文字を読ませない */
+.toast {
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+}
+
+.toast .grow {
+  text-wrap: balance;
+  word-break: auto-phrase;
 }
 
 .toast.error {
@@ -1257,20 +1398,21 @@ body.resizing .layout {
   color: #ffffff;
 }
 
+/* 「元に戻す」「閉じる」は枠なしの文字ボタン */
 .toast button {
   border: none;
   background: transparent;
+  box-shadow: none;
   color: inherit;
   padding: 6px 8px;
 }
 
 .toast .toast-action {
   font-weight: 700;
-  text-decoration: underline;
 }
 
 .toast button:hover {
-  background: rgb(255 255 255 / 0.12);
+  text-decoration: underline;
 }
 
 @keyframes toast-in {
@@ -1280,10 +1422,14 @@ body.resizing .layout {
   }
 }
 
-/* スマホでは＋ボタンと重ならないよう上に */
+/* スマホでは＋ボタンの左に下端をそろえて並べる (2行になってもよい) */
 @media (max-width: 743px) {
   .toast-region {
-    bottom: calc(88px + env(safe-area-inset-bottom));
+    left: 8px;
+    right: 72px;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    width: auto;
+    transform: none;
   }
 }
 
@@ -1404,6 +1550,7 @@ button.item-who {
   padding: 0;
   border: none;
   background: transparent;
+  box-shadow: none;
   color: var(--muted);
   font-size: inherit;
   font-weight: 400;
@@ -1494,15 +1641,9 @@ button.paid-toggle.on {
 
 /* デスクトップ: 画面全体を最大 1440px で中央寄せ (A案)。両脇は薄い灰色 */
 @media (min-width: 1128px) {
-  body:has(> #root > .layout) {
-    background: var(--surface-soft);
-  }
-
   .layout {
     max-width: 1440px;
     margin: 0 auto;
-    background: var(--bg);
-    box-shadow: 0 0 0 1px var(--border);
   }
 }
 
@@ -1529,9 +1670,7 @@ button.paid-toggle.on {
 .modal {
   width: min(340px, 100%);
   padding: 20px;
-  border-radius: 14px;
-  background: var(--card);
-  box-shadow: var(--shadow-float);
+  border-radius: 20px;
 }
 
 .modal-title {
@@ -1680,6 +1819,7 @@ button.sb-trash {
   border: 0;
   border-radius: 6px;
   background: transparent;
+  box-shadow: none;
   color: var(--muted-soft);
 }
 
@@ -1833,7 +1973,6 @@ button.member-add {
 }
 
 button.outline {
-  border: 1px solid var(--text);
   font-weight: 600;
 }
 
@@ -1882,6 +2021,7 @@ button.receipt-mark {
   border: 0;
   border-radius: 6px;
   background: transparent;
+  box-shadow: none;
   color: var(--muted);
   vertical-align: middle;
 }

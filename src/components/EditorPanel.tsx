@@ -47,7 +47,11 @@ export function EditorPanel(p: Props) {
           className="left"
           min={180}
           max={400}
-          measure={() => document.querySelector('.sidebar')!.getBoundingClientRect().width}
+          // サイドバーは列の中で左に余白を取って浮いているため、列の左端から右端までを測る
+          measure={() =>
+            document.querySelector('.sidebar')!.getBoundingClientRect().right -
+            document.querySelector('.layout')!.getBoundingClientRect().left
+          }
           onChange={(sb) => p.setWidth('sb', sb)}
           onReset={() => p.setWidth('sb', undefined)}
         />
