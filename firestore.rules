@@ -26,8 +26,10 @@ service cloud.firestore {
         allow create: if request.resource.data.keys().hasOnly(['name', 'createdAt'])
           && validName(request.resource.data.name, 50)
           && (tripExists(tripId) || existsAfter(/databases/$(database)/documents/trips/$(tripId)));
-        allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])
-          && validName(request.resource.data.name, 50);
+        // removedAt: 論理削除の印 (#42 の移行期間。旧版の削除 (delete) もまだ許す)
+        allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'removedAt'])
+          && validName(request.resource.data.name, 50)
+          && (!('removedAt' in request.resource.data) || request.resource.data.removedAt is timestamp);
       }
 
       match /categories/{categoryId} {
@@ -35,8 +37,9 @@ service cloud.firestore {
         allow create: if request.resource.data.keys().hasOnly(['name', 'createdAt'])
           && validName(request.resource.data.name, 50)
           && tripExists(tripId);
-        allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'archived'])
+        allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'archived', 'removedAt'])
           && validName(request.resource.data.name, 50)
+          && (!('removedAt' in request.resource.data) || request.resource.data.removedAt is timestamp)
           && (!('archived' in request.resource.data) || request.resource.data.archived is bool);
       }
 
@@ -52,7 +55,7 @@ service cloud.firestore {
 
       match /expenses/{expenseId} {
         function validExpense(d) {
-          return d.keys().hasOnly(['title', 'amount', 'payerId', 'mode', 'shares', 'items', 'categoryId', 'memo', 'date', 'hasReceipt', 'settledIds', 'deletedAt', 'createdAt'])
+          return d.keys().hasOnly(['title', 'amount', 'payerId', 'mode', 'shares', 'items', 'categoryId', 'memo', 'date', 'hasReceipt', 'settledIds', 'deletedAt', 'trashedAt', 'createdAt'])
             && validName(d.title, 100)
             && d.amount is int && d.amount > 0 && d.amount <= 10000000000
             && d.payerId is string && d.payerId.size() > 0 && d.payerId.size() <= 64
@@ -64,7 +67,8 @@ service cloud.firestore {
             && (!('date' in d) || (d.date is string && d.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')))
             && (!('hasReceipt' in d) || d.hasReceipt is bool)
             && (!('settledIds' in d) || (d.settledIds is list && d.settledIds.size() <= 100))
-            && (!('deletedAt' in d) || d.deletedAt is int);
+            && (!('deletedAt' in d) || d.deletedAt is int)
+            && (!('trashedAt' in d) || d.trashedAt is timestamp);
         }
 
         allow read, delete: if true;

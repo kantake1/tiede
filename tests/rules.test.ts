@@ -107,4 +107,24 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)('firestore.rules', () => {
     await assertFails(setDoc(r, { data: 'a'.repeat(420001), createdAt: serverTimestamp() }))
     await assertFails(setDoc(r, { data: '', createdAt: serverTimestamp() }))
   })
+
+  it('移行期間 (#42): 新版の論理削除と旧版の削除がどちらも通る', async () => {
+    const m = doc(db, 'trips', 't1', 'members', 'm1')
+    const c = doc(db, 'trips', 't1', 'categories', 'c1')
+    const e = doc(db, 'trips', 't1', 'expenses', 'e1')
+    await assertSucceeds(setDoc(m, { name: 'たろう', createdAt: serverTimestamp() }))
+    await assertSucceeds(setDoc(c, { name: '旅行', createdAt: serverTimestamp() }))
+    await assertSucceeds(setDoc(e, expense({})))
+    // 新版
+    await assertSucceeds(updateDoc(m, { removedAt: serverTimestamp() }))
+    await assertSucceeds(updateDoc(c, { removedAt: serverTimestamp() }))
+    await assertFails(updateDoc(c, { removedAt: 'x' }))
+    await assertSucceeds(updateDoc(e, { deletedAt: Date.now(), trashedAt: serverTimestamp() }))
+    await assertFails(updateDoc(e, { trashedAt: 1 }))
+    // 旧版
+    await assertSucceeds(updateDoc(e, { deletedAt: Date.now() }))
+    await assertSucceeds(deleteDoc(e))
+    await assertSucceeds(deleteDoc(m))
+    await assertSucceeds(deleteDoc(c))
+  })
 })
