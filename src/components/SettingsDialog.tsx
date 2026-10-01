@@ -66,6 +66,9 @@ export function SettingsDialog({ ref, data, store, tripId, run, onDeleteEvent, o
           </>
         )}
       </section>
+      <p className="muted small settings-foot">
+        <a href="/privacy">プライバシーポリシー</a>
+      </p>
     </dialog>
   )
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Home } from './pages/Home'
+import { Privacy } from './pages/Privacy'
 import { TripPage } from './pages/TripPage'
 import { Logo } from './components/Logo'
 
@@ -30,7 +31,16 @@ export default function App() {
           <Logo />
         </a>
       </header>
-      <Home />
+      {location.pathname === '/privacy' ? (
+        <Privacy />
+      ) : (
+        <>
+          <Home />
+          <footer className="site-foot">
+            <a href="/privacy">プライバシーポリシー</a>
+          </footer>
+        </>
+      )}
     </div>
   )
 }

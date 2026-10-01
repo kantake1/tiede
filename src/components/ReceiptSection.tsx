@@ -24,6 +24,8 @@ type Options = {
 // 説明文は端末ごとに初回だけ表示する
 const HINT_READ = 'tiede:hint-receipt-read'
 const HINT_SAVED = 'tiede:hint-receipt-saved'
+// 写真を Gemini に送ることの確認は、端末ごとに初回だけ (#41)
+const AI_CONSENT = 'tiede:receipt-ai-consent'
 
 /**
  * 支払い入力のレシート欄 (読み取り・写真の表示・再読み取りの確認)。
@@ -37,6 +39,8 @@ export function useReceipt({ readReceipt, getReceipt, hasSaved, limitReached, on
   const hasPhoto = receiptNew !== undefined || hasSaved
   const viewer = useReceiptViewer((msg) => setNote(msg))
   const [confirmReread, setConfirmReread] = useState(false)
+  const [consented, setConsented] = useState(() => loadFlag(AI_CONSENT))
+  const [askConsent, setAskConsent] = useState(false)
   // 一度表示した説明文は、同じ入力欄に戻っても再び出さない
   const [hintRead, setHintRead] = useState(() => !loadFlag(HINT_READ))
   const [hintSaved, setHintSaved] = useState(() => !loadFlag(HINT_SAVED))
@@ -49,6 +53,10 @@ export function useReceipt({ readReceipt, getReceipt, hasSaved, limitReached, on
 
   async function read(file: File | undefined) {
     if (!file || !readReceipt) return
+    if (!consented) {
+      saveFlag(AI_CONSENT, true)
+      setConsented(true)
+    }
     setReading(true)
     setReadError('')
     setNote('')
@@ -98,10 +106,16 @@ export function useReceipt({ readReceipt, getReceipt, hasSaved, limitReached, on
         </>
       ) : (
         <>
-          <label className={`button ${reading ? 'disabled' : ''}`}>
-            <input type="file" accept="image/*" hidden disabled={reading} onChange={(e) => read(e.target.files?.[0])} />
-            <Camera size={18} /> {reading ? '読み取り中…' : 'レシートを読み取る'}
-          </label>
+          {consented ? (
+            <label className={`button ${reading ? 'disabled' : ''}`}>
+              <input type="file" accept="image/*" hidden disabled={reading} onChange={(e) => read(e.target.files?.[0])} />
+              <Camera size={18} /> {reading ? '読み取り中…' : 'レシートを読み取る'}
+            </label>
+          ) : (
+            <button type="button" className="outline with-icon" disabled={reading} onClick={() => setAskConsent(true)}>
+              <Camera size={18} /> レシートを読み取る
+            </button>
+          )}
           {showReadHint && <span className="muted small">品目と合計を自動入力し、写真も保存します</span>}
         </>
       )}
@@ -110,8 +124,50 @@ export function useReceipt({ readReceipt, getReceipt, hasSaved, limitReached, on
     </div>
   )
 
+  // 確認後の「読み取る」自体を写真選択にする (iPhone は確認後の自動クリックで写真選択を開かないため)
+  const pickPhoto = (label: string, className: string, onPick: () => void) => (
+    <label className={`button ${className}`}>
+      <input
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(e) => {
+          onPick()
+          read(e.target.files?.[0])
+        }}
+      />
+      {label}
+    </label>
+  )
+
   const dialogs = createPortal(
     <>
+      {askConsent && (
+        <div className="modal-scrim" onClick={() => setAskConsent(false)}>
+          <div className="modal" role="alertdialog" aria-modal="true" aria-labelledby="consent-title" onClick={(e) => e.stopPropagation()}>
+            <p id="consent-title" className="modal-title">
+              レシートの読み取りについて
+            </p>
+            <p className="modal-body">写真を Google の AI (Gemini) に送って、品目と合計を読み取ります。</p>
+            <ul className="modal-body modal-list">
+              <li>送った写真が AI の学習に使われることはありません。不正利用の監視などのため、一定期間 Google に記録されます</li>
+              <li>カード番号・会員番号・氏名などが写っている部分は隠してください</li>
+              <li>写真はこのグループに保存され、URL を知っている人が見られます</li>
+            </ul>
+            <p className="modal-body">
+              <a href="/privacy" target="_blank" rel="noreferrer">
+                プライバシーポリシー
+              </a>
+            </p>
+            <div className="modal-actions">
+              <button type="button" onClick={() => setAskConsent(false)}>
+                キャンセル
+              </button>
+              {pickPhoto('読み取る', '', () => setAskConsent(false))}
+            </div>
+          </div>
+        </div>
+      )}
       {confirmReread && (
         <div className="modal-scrim" onClick={() => setConfirmReread(false)}>
           <div className="modal" role="alertdialog" aria-modal="true" aria-labelledby="reread-title" onClick={(e) => e.stopPropagation()}>
@@ -119,23 +175,19 @@ export function useReceipt({ readReceipt, getReceipt, hasSaved, limitReached, on
               再度読み取りますか？
             </p>
             <p className="modal-body">現在保存されているレシートの写真は削除され、新しい写真に置き換わります。</p>
+            {!consented && (
+              <p className="modal-body">
+                写真は Google の AI (Gemini) に送って読み取ります。AI の学習には使われません。
+                <a href="/privacy" target="_blank" rel="noreferrer">
+                  詳しく
+                </a>
+              </p>
+            )}
             <div className="modal-actions">
               <button type="button" onClick={() => setConfirmReread(false)}>
                 キャンセル
               </button>
-              {/* iPhone は確認後の自動クリックで写真選択を開かないため、このボタン自体を写真選択にする */}
-              <label className="button danger-fill">
-                <input
-                  type="file"
-                  accept="image/*"
-                  hidden
-                  onChange={(e) => {
-                    setConfirmReread(false)
-                    read(e.target.files?.[0])
-                  }}
-                />
-                読み取る
-              </label>
+              {pickPhoto('読み取る', 'danger-fill', () => setConfirmReread(false))}
             </div>
           </div>
         </div>

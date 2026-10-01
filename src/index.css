@@ -1546,6 +1546,15 @@ button.paid-toggle.on {
   line-height: 1.6;
 }
 
+.modal-list {
+  margin: 8px 0;
+  padding-left: 1.2em;
+}
+
+.modal-list li + li {
+  margin-top: 4px;
+}
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;
@@ -1887,4 +1896,57 @@ button.receipt-mark:hover {
     padding: 8px;
     margin: -6px 0 -6px 2px;
   }
+}
+
+/* プライバシーポリシー (#41) */
+.site-foot,
+.settings-foot {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.settings-foot {
+  margin: 16px 0 0;
+}
+
+.policy {
+  color: var(--body);
+  padding-bottom: 16px;
+}
+
+.policy h2 {
+  color: var(--text);
+  font-size: 1.375rem;
+  margin: 8px 0 4px;
+}
+
+.policy h3 {
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 24px 0 6px;
+}
+
+.policy p,
+.policy li {
+  max-width: 65ch;
+  line-height: 1.7;
+}
+
+.policy p {
+  margin: 0 0 8px;
+}
+
+.policy ul {
+  margin: 0 0 8px;
+  padding-left: 1.3em;
+}
+
+.policy li + li {
+  margin-top: 6px;
+}
+
+.policy a {
+  overflow-wrap: anywhere;
 }

@@ -10,7 +10,14 @@ async function expectNoHorizontalScroll(page: Page) {
 test('スマホ: ＋から全画面で追加し、引き出しのイベントをスワイプで削除する', async ({ page }) => {
   page.on('dialog', (d) => (d.type() === 'prompt' ? d.accept('旅行') : d.accept()))
 
+  // プライバシーポリシーは横スクロールなしで読める
+  await page.goto('/privacy')
+  await expect(page.getByRole('heading', { name: 'プライバシーポリシー' })).toBeVisible()
+  await expectNoHorizontalScroll(page)
+
   await page.goto('/')
+  await expect(page.getByText('URL を知っている人は誰でも閲覧・編集・削除できる')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'プライバシーポリシー' })).toBeVisible()
   await page.getByPlaceholder('例: いつものメンバー').fill('スマホ旅行')
   await page.getByLabel('追加するメンバーの名前').fill('Aさん, Bさん')
   await page.locator('button[type="submit"]').click()
@@ -28,6 +35,12 @@ test('スマホ: ＋から全画面で追加し、引き出しのイベントを
   await page.getByRole('button', { name: '支払いを追加' }).click()
   const f = page.locator('.expense-form')
   await expect(f).toBeVisible()
+  // レシートの初回確認が画面に収まり、キャンセルできる
+  await f.getByRole('button', { name: 'レシートを読み取る' }).click()
+  const consent = page.getByRole('alertdialog', { name: 'レシートの読み取りについて' })
+  await expect(consent).toBeInViewport({ ratio: 1 })
+  await consent.getByRole('button', { name: 'キャンセル' }).click()
+  await expect(consent).toBeHidden()
   await f.getByPlaceholder('例: 食事代').fill('夕食')
   await f.getByPlaceholder('12000').fill('3000')
   await f.getByLabel('立て替えた人').selectOption({ label: 'Aさん' })
