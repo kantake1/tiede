@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { dateOf, formatDate, groupByDate, toDateKey } from './date'
 import { friendlyError } from './errors'
 import { parseNumber, yen } from './format'
+import { splitNames } from './names'
+import { forgetRecent, getRecent, restoreRecent, touchRecent } from './recent'
 import { settlementText } from './shareText'
 import { loadFlag, loadJson, saveFlag, saveJson } from './storage'
 
@@ -99,5 +101,29 @@ describe('storage', () => {
     expect(loadFlag('f')).toBe(false)
     expect(() => saveJson('k', 1)).not.toThrow()
     expect(() => saveFlag('f', true)).not.toThrow()
+  })
+})
+
+describe('names', () => {
+  it('カンマ・改行で分け、空白と重複を除く', () => {
+    expect(splitNames(' Aさん, Bさん\nCさん、Aさん,,')).toEqual(['Aさん', 'Bさん', 'Cさん'])
+    expect(splitNames('  ')).toEqual([])
+  })
+})
+
+describe('recent', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('履歴から消したグループを元の位置に戻す', () => {
+    const m = new Map<string, string>()
+    vi.stubGlobal('localStorage', { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v) })
+    vi.spyOn(Date, 'now').mockReturnValueOnce(1).mockReturnValueOnce(2).mockReturnValueOnce(3)
+    touchRecent('a', 'A')
+    touchRecent('b', 'B')
+    touchRecent('c', 'C')
+    const b = getRecent()[1]
+    forgetRecent('b')
+    restoreRecent(b)
+    expect(getRecent().map((r) => r.id)).toEqual(['c', 'b', 'a'])
   })
 })

@@ -1468,6 +1468,68 @@ button.sb-trash:focus-visible {
   }
 }
 
+/* トップ: メンバーのリスト追加、最近開いたグループ (行はサイドバーの .sb-row を流用) */
+.field-label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+button.member-add {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.member-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.member-list > li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 4px 0 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.member-list > li:last-child {
+  border-bottom: none;
+}
+
+.member-list button.icon {
+  color: var(--muted-soft);
+}
+
+.list > li.sb-row {
+  padding: 2px 0;
+}
+
+.recent-link {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 4px;
+}
+
+@media (min-width: 1128px) {
+  .swipe-hint {
+    display: none;
+  }
+}
+
+.swipe-hint {
+  margin: 0;
+}
+
 /* レシート写真の表示 */
 .viewer {
   position: fixed;
