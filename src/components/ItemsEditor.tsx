@@ -2,6 +2,8 @@ import { Plus, X } from 'lucide-react'
 import { pickItemMember, type ItemDraft } from '../lib/expenseDraft'
 import { yen } from '../lib/format'
 import type { Member } from '../types'
+import { SettledToggle } from './SettledToggle'
+import { Owed } from './SharesEditor'
 
 type Props = {
   members: Member[]
@@ -15,10 +17,13 @@ type Props = {
   onApplyTotal: () => void
   /** 各自の負担額 (入力エラーがあれば null) */
   preview: Record<string, number> | null
+  payerId: string
+  settled: string[]
+  onToggleSettled: (id: string) => void
 }
 
 /** 割り方「品目」: 品目ごとに対象者を選ぶ。読み取り直後は全員で、個人の物は名前を1回押せばその人だけになる */
-export function ItemsEditor({ members, items, onChange, itemsTotal, amount, amountEmpty, onApplyTotal, preview }: Props) {
+export function ItemsEditor({ members, items, onChange, itemsTotal, amount, amountEmpty, onApplyTotal, preview, payerId, settled, onToggleSettled }: Props) {
   const allIds = () => members.map((m) => m.id)
   const all = (it: ItemDraft) => members.every((m) => it.memberIds.includes(m.id))
   const update = (i: number, patch: Partial<ItemDraft>) => onChange(items.map((it, j) => (j === i ? { ...it, ...patch } : it)))
@@ -101,13 +106,14 @@ export function ItemsEditor({ members, items, onChange, itemsTotal, amount, amou
         )}
       </div>
       {preview && (
-        <ul className="participants">
+        <ul className="participants with-paid">
           {members
             .filter((m) => preview[m.id])
             .map((m) => (
               <li key={m.id}>
                 <span>{m.name}</span>
-                <span className="owed">{yen(preview[m.id])}</span>
+                <Owed v={preview[m.id]} settled={settled.includes(m.id) && m.id !== payerId} />
+                <SettledToggle name={m.name} on={settled.includes(m.id)} hidden={m.id === payerId} onToggle={() => onToggleSettled(m.id)} />
               </li>
             ))}
         </ul>

@@ -1,7 +1,7 @@
 import { ArrowRight, ChevronRight, Share2 } from 'lucide-react'
 import { useMemo, type ReactNode } from 'react'
 import { yen } from '../lib/format'
-import { computeBalances, settle } from '../lib/settle'
+import { computeBalances, settle, settledOf } from '../lib/settle'
 import { settlementText } from '../lib/shareText'
 import type { Expense, Member } from '../types'
 
@@ -18,9 +18,12 @@ type Props = {
 }
 
 export function SettlementPanel({ members, expenses, nameOf, action, groupName, label, onShareText }: Props) {
-  const { balances, transfers, total } = useMemo(() => {
+  const { balances, transfers, settled, total } = useMemo(() => {
     const balances = computeBalances(members, expenses)
-    return { balances, transfers: settle(balances), total: expenses.reduce((s, e) => s + e.amount, 0) }
+    const settled = expenses.flatMap((e) =>
+      Object.entries(settledOf(e)).map(([from, amount]) => ({ from, to: e.payerId, amount, title: e.title })),
+    )
+    return { balances, transfers: settle(balances), settled, total: expenses.reduce((s, e) => s + e.amount, 0) }
   }, [members, expenses])
 
   return (
@@ -49,7 +52,7 @@ export function SettlementPanel({ members, expenses, nameOf, action, groupName, 
       {expenses.length > 0 && (
         <button
           className="small with-icon share-text"
-          onClick={() => onShareText(settlementText({ groupName, label, transfers, total, nameOf, url: location.href }))}
+          onClick={() => onShareText(settlementText({ groupName, label, transfers, total, nameOf, settled, url: location.href }))}
         >
           <Share2 size={16} /> 精算結果を共有
         </button>
@@ -83,6 +86,7 @@ export function SettlementPanel({ members, expenses, nameOf, action, groupName, 
               ))}
             </tbody>
           </table>
+          {settled.length > 0 && <p className="muted small">受取済みの分は立替額・負担額から除いています。</p>}
         </details>
       )}
     </section>

@@ -1295,6 +1295,47 @@ body.resizing .layout {
   white-space: nowrap;
 }
 
+/* 受取済み: 一覧では名前に ✓ と緑、入力欄では各行の右端の切り替え */
+.owed-item.paid {
+  color: var(--plus);
+}
+
+.participants.with-paid li {
+  grid-template-columns: 1fr auto 72px auto;
+}
+
+.participants.with-paid li:has(> span:first-child) {
+  grid-template-columns: 1fr auto auto;
+}
+
+.participants .share-input {
+  width: 88px;
+}
+
+.participants .owed s {
+  color: var(--muted-soft);
+}
+
+.paid-toggle {
+  grid-column: -2 / -1;
+  min-width: 88px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+button.paid-toggle.on {
+  border-color: var(--plus);
+  color: var(--plus);
+  font-weight: 600;
+  background: transparent;
+}
+
 /* トップ (グループ作成) の見出しは中央 */
 .app-header.center {
   text-align: center;
@@ -1481,6 +1522,68 @@ button.sb-trash:focus-visible {
     background: var(--danger);
     color: #ffffff;
   }
+}
+
+/* トップ: メンバーのリスト追加、最近開いたグループ (行はサイドバーの .sb-row を流用) */
+.field-label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+button.member-add {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.member-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.member-list > li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 4px 0 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.member-list > li:last-child {
+  border-bottom: none;
+}
+
+.member-list button.icon {
+  color: var(--muted-soft);
+}
+
+.list > li.sb-row {
+  padding: 2px 0;
+}
+
+.recent-link {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 4px;
+}
+
+@media (min-width: 1128px) {
+  .swipe-hint {
+    display: none;
+  }
+}
+
+.swipe-hint {
+  margin: 0;
 }
 
 /* レシート写真の表示 */

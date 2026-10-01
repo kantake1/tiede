@@ -29,7 +29,7 @@ test('旅行の立て替えを記録して精算する', async ({ page, browser 
   // グループ作成
   await page.goto('/')
   await page.getByPlaceholder('例: いつものメンバー').fill('テスト旅行')
-  await page.locator('textarea').fill('Aさん\nBさん\nCさん')
+  await page.getByLabel('追加するメンバーの名前').fill('Aさん, Bさん, Cさん')
   await page.locator('button[type="submit"]').click()
   await page.waitForURL(/\/t\/.+/)
 
@@ -103,7 +103,12 @@ test('旅行の立て替えを記録して精算する', async ({ page, browser 
 test('品目別: 全員の品目は名前を1回押すとその人だけになる', async ({ page }) => {
   await page.goto('/')
   await page.getByPlaceholder('例: いつものメンバー').fill('買い出し')
-  await page.locator('textarea').fill('Aさん\nBさん\nCさん')
+  const member = page.getByLabel('追加するメンバーの名前')
+  for (const n of ['Aさん', 'Bさん', 'Aさん']) await member.fill(n).then(() => member.press('Enter'))
+  await expect(page.getByText('Aさん はすでに追加しています')).toBeVisible()
+  await member.fill('Cさん')
+  await page.getByRole('button', { name: '追加', exact: true }).click()
+  await expect(page.locator('.member-list li')).toHaveText(['1Aさん', '2Bさん', '3Cさん'])
   await page.locator('button[type="submit"]').click()
   await page.waitForURL(/\/t\/.+/)
 
@@ -141,7 +146,7 @@ test('タブレット幅: 再度読み取るの確認をキャンセルできる
   await page.route(/^https?:\/\/(?!localhost|127\.0\.0\.1)/, (r) => r.abort())
   await page.goto('/')
   await page.getByPlaceholder('例: いつものメンバー').fill('レシート')
-  await page.locator('textarea').fill('Aさん\nBさん')
+  await page.getByLabel('追加するメンバーの名前').fill('Aさん, Bさん')
   await page.locator('button[type="submit"]').click()
   await page.waitForURL(/\/t\/.+/)
 
@@ -160,17 +165,52 @@ test('広い画面: 格納を選んでいてもサイドバー幅の取っ手が
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/')
   await page.getByPlaceholder('例: いつものメンバー').fill('取っ手')
-  await page.locator('textarea').fill('Aさん\nBさん')
+  await page.getByLabel('追加するメンバーの名前').fill('Aさん, Bさん')
   await page.locator('button[type="submit"]').click()
   await page.waitForURL(/\/t\/.+/)
   await expect(page.getByRole('separator', { name: /サイドバーの幅/ })).toBeAttached()
 })
 
+test('最近開いたグループ: 履歴から消しても元に戻せる', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/')
+  await page.getByPlaceholder('例: いつものメンバー').fill('履歴')
+  await page.getByLabel('追加するメンバーの名前').fill('Aさん, Bさん')
+  await page.locator('button[type="submit"]').click()
+  await page.waitForURL(/\/t\/.+/)
+  await expect(page.locator('.sidebar h1')).toHaveText('履歴') // 読み込み後に履歴へ記録される
+  await page.goto('/')
+  await page.getByRole('button', { name: '履歴 を履歴から削除' }).click()
+  await expect(page.getByRole('link', { name: '履歴', exact: true })).toBeHidden()
+  await page.getByRole('button', { name: '元に戻す' }).click()
+  await expect(page.getByRole('link', { name: '履歴', exact: true })).toBeVisible()
+})
+
+
+test('受取済みの人はその支払いの精算から外れる', async ({ page }) => {
+  await page.goto('/')
+  await page.getByPlaceholder('例: いつものメンバー').fill('受取')
+  await page.getByLabel('追加するメンバーの名前').fill('Aさん, Bさん, Cさん')
+  await page.locator('button[type="submit"]').click()
+  await page.waitForURL(/\/t\/.+/)
+
+  const f = form(page)
+  await f.getByPlaceholder('例: 食事代').fill('焼肉')
+  await f.getByPlaceholder('12000').fill('3000')
+  await expect(f.getByRole('button', { name: 'Aさん から受取済み' })).toHaveCount(0) // 立て替えた本人には付けられない
+  await f.getByRole('button', { name: 'Bさん から受取済み' }).click()
+  await f.getByRole('button', { name: '追加', exact: true }).click()
+
+  await expect(page.locator('.expense', { hasText: '焼肉' })).toContainText('受取済み 1人')
+  await expect(page.locator('.transfers li')).toHaveText([/Cさん.*Aさん.*1,000/])
+})
+
+
 test('削除した支払いは「削除済み」から元に戻す・完全に削除できる', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/')
   await page.getByPlaceholder('例: いつものメンバー').fill('削除済み')
-  await page.locator('textarea').fill('Aさん\nBさん')
+  await page.getByLabel('追加するメンバーの名前').fill('Aさん, Bさん')
   await page.locator('button[type="submit"]').click()
   await page.waitForURL(/\/t\/.+/)
 

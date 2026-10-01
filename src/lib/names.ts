@@ -17,3 +17,6 @@ export function askName(message: string, max: number, opts: { current?: string; 
   }
   return name
 }
+
+/** 入力欄の文字をメンバー名に分ける。カンマ・改行区切りの貼り付けはまとめて扱う */
+export const splitNames = (text: string) => [...new Set(text.split(/[\n,、，]/).map((s) => s.trim()).filter(Boolean))]
