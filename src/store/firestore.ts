@@ -116,6 +116,7 @@ const toExpense = (id: string, d: DocumentData): Expense => ({
   hasReceipt: d.hasReceipt === true,
   settledIds: d.settledIds,
   deletedAt: d.deletedAt,
+  trashedAt: 'trashedAt' in d ? millis(d.trashedAt) : undefined,
   createdAt: millis(d.createdAt),
 })
 
@@ -180,7 +181,15 @@ export const firestoreStore: TripStore = {
           pending[0] = s.metadata.hasPendingWrites
           // 端末に無く、まだサーバーからも取れていない間は「無い」と判定しない
           if (!s.exists() && s.metadata.fromCache) return
-          trip = s.exists() ? { id: s.id, name: s.data().name, createdAt: millis(s.data().createdAt) } : null
+          const d = s.data()
+          trip = d
+            ? {
+                id: s.id,
+                name: d.name,
+                createdAt: millis(d.createdAt),
+                deleteRequestedAt: 'deleteRequestedAt' in d ? millis(d.deleteRequestedAt) : undefined,
+              }
+            : null
           emit()
         },
         err,
@@ -193,6 +202,11 @@ export const firestoreStore: TripStore = {
   },
 
   renameTrip: (tripId, name) => write(updateDoc(doc(trips(), tripId), { name })),
+
+  // サーバー時刻で記録し、端末の時刻で猶予を縮められないようにする (ルールで検証)
+  requestTripDeletion: (tripId) => write(updateDoc(doc(trips(), tripId), { deleteRequestedAt: serverTimestamp() })),
+
+  cancelTripDeletion: (tripId) => write(updateDoc(doc(trips(), tripId), { deleteRequestedAt: deleteField() })),
 
   addMember: (tripId, name) => write(setDoc(doc(members(tripId)), { name, createdAt: serverTimestamp() })),
 

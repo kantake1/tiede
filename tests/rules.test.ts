@@ -182,22 +182,15 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)('firestore.rules', () => {
       await assertSucceeds(updateDoc(trip(), { deleteRequestedAt: deleteField() }))
     })
 
-    it('予約から猶予が過ぎたグループは、中身 (大人数・多数の支払い) をまとめて消してからグループを消せる', async () => {
+    it('予約から猶予が過ぎても、端末からはグループも中身も消せない (Cloud Functions が消す)', async () => {
       await seed('trips/t2', { name: '消すグループ', createdAt: ago(30), deleteRequestedAt: ago(8) })
-      const paths: string[] = []
-      for (let i = 0; i < 40; i++) paths.push(`trips/t2/members/m${i}`, `trips/t2/expenses/e${i}`)
-      for (let i = 0; i < 10; i++) paths.push(`trips/t2/categories/c${i}`, `trips/t2/receipts/e${i}`)
-      for (const p of paths) {
-        if (p.includes('/expenses/')) await seed(p, legacyExpense)
-        else if (p.includes('/receipts/')) await seed(p, { data: 'a', createdAt: ago(30) })
-        else await seed(p, { name: 'x', createdAt: ago(30) })
-      }
-      const b = writeBatch(db)
-      for (const p of paths) b.delete(doc(db, p))
-      await assertSucceeds(b.commit())
-      await assertSucceeds(deleteDoc(doc(db, 'trips', 't2')))
-      // ほかのグループ (予約なし) には影響しない
-      await assertSucceeds(getDoc(trip()))
+      await seed('trips/t2/members/m1', { name: 'x', createdAt: ago(30) })
+      await seed('trips/t2/categories/c1', { name: 'x', createdAt: ago(30) })
+      await seed('trips/t2/expenses/e1', legacyExpense)
+      await assertFails(deleteDoc(doc(db, 'trips/t2/members/m1')))
+      await assertFails(deleteDoc(doc(db, 'trips/t2/categories/c1')))
+      await assertFails(deleteDoc(doc(db, 'trips/t2/expenses/e1')))
+      await assertFails(deleteDoc(doc(db, 'trips', 't2')))
     })
   })
 })

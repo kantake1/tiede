@@ -36,6 +36,8 @@ export type Expense = {
   settledIds?: string[]
   /** 削除した日時。「削除済み」に残り、合計・精算には含めない */
   deletedAt?: number
+  /** 「削除済み」に移したサーバー時刻。ここから猶予が過ぎるまで完全に削除できない (#42)。以前に削除したものには無い */
+  trashedAt?: number
   createdAt: number
 }
 
@@ -45,6 +47,8 @@ export type Trip = {
   id: string
   name: string
   createdAt: number
+  /** 削除予約の時刻。猶予が過ぎると Cloud Functions が中身ごと消す (#6) */
+  deleteRequestedAt?: number
 }
 
 export type Category = {

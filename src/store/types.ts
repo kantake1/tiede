@@ -5,6 +5,9 @@ export interface TripStore {
   createTrip(name: string, memberNames: string[]): Promise<string>
   subscribe(tripId: string, onData: (data: TripData | null) => void, onError: (e: Error) => void): () => void
   renameTrip(tripId: string, name: string): Promise<void>
+  /** グループの削除を予約する (猶予が過ぎると中身ごと消える)。誰でも取り消せる */
+  requestTripDeletion(tripId: string): Promise<void>
+  cancelTripDeletion(tripId: string): Promise<void>
   addMember(tripId: string, name: string): Promise<void>
   renameMember(tripId: string, memberId: string, name: string): Promise<void>
   removeMember(tripId: string, memberId: string): Promise<void>

@@ -1,4 +1,4 @@
-import { Archive, ArchiveRestore, Check, Link2, Menu, Plus } from 'lucide-react'
+import { Archive, ArchiveRestore, Check, Clock, Link2, Menu, Plus } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import { useConfirm } from '../components/ConfirmDialog'
 import { DeletedList } from '../components/DeletedList'
@@ -9,12 +9,15 @@ import { SettingsDialog } from '../components/SettingsDialog'
 import { SettlementPanel } from '../components/SettlementPanel'
 import { Sidebar } from '../components/Sidebar'
 import { Toast } from '../components/Toast'
+import { TripDeleteDialog } from '../components/TripDeleteDialog'
 import { useReceiptViewer } from '../components/useReceiptViewer'
 import { useEditing } from '../hooks/useEditing'
 import { useLayout } from '../hooks/useLayout'
 import { useToast } from '../hooks/useToast'
 import { useTripData } from '../hooks/useTripData'
+import { formatDate, toDateKey } from '../lib/date'
 import { friendlyError } from '../lib/errors'
+import { tripDeletionAt } from '../lib/grace'
 import { askName } from '../lib/names'
 import { tripView } from '../lib/tripView'
 
@@ -37,6 +40,8 @@ export function TripPage({ tripId }: { tripId: string }) {
     setFilterState(f)
   }
   const settingsRef = useRef<HTMLDialogElement>(null)
+  // グループの削除予約の確認画面
+  const [askingDelete, setAskingDelete] = useState(false)
 
   const nameOf = useMemo(() => {
     const map = new Map(data?.members.map((m) => [m.id, m.name]))
@@ -148,6 +153,18 @@ export function TripPage({ tripId }: { tripId: string }) {
     if (archived) setFilter(filter.filter((k) => k !== id))
   }
 
+  // グループの削除予約 (#6)。猶予が過ぎると Cloud Functions が中身ごと消す。予約中は誰でも取り消せる
+  function cancelTripDeletion() {
+    run(store!.cancelTripDeletion(tripId))
+    notify('削除を取り消しました')
+  }
+
+  function requestTripDeletion() {
+    setAskingDelete(false)
+    run(store!.requestTripDeletion(tripId))
+    notify('削除を予約しました', { action: { label: '元に戻す', run: () => run(store!.cancelTripDeletion(tripId)) } })
+  }
+
   const closeEditor = () => {
     setEditing(null)
     setSheet(false)
@@ -221,6 +238,20 @@ export function TripPage({ tripId }: { tripId: string }) {
       />
 
       <section className="col-list" aria-label="精算と支払い一覧">
+        {data.trip.deleteRequestedAt !== undefined && (
+          <div className="notice pending-delete" role="status">
+            <Clock size={18} />
+            <div className="grow">
+              <div className="pending-delete-title">
+                {formatDate(toDateKey(new Date(tripDeletionAt(data.trip.deleteRequestedAt))))} 以降に削除されます
+              </div>
+              <div>このグループは削除が予約されています。残す場合は取り消してください。</div>
+              <button className="small" onClick={cancelTripDeletion}>
+                削除を取り消す
+              </button>
+            </div>
+          </div>
+        )}
         {showDeleted ? (
           <DeletedList
             expenses={data.deleted}
@@ -308,7 +339,24 @@ export function TripPage({ tripId }: { tripId: string }) {
       {confirmUi}
       {receiptViewer.ui}
 
-      <SettingsDialog ref={settingsRef} data={data} store={store} tripId={tripId} run={run} onDeleteEvent={(id) => deleteEvent(id, true)} />
+      {askingDelete && <TripDeleteDialog data={data} onCancel={() => setAskingDelete(false)} onConfirm={requestTripDeletion} />}
+
+      <SettingsDialog
+        ref={settingsRef}
+        data={data}
+        store={store}
+        tripId={tripId}
+        run={run}
+        onDeleteEvent={(id) => deleteEvent(id, true)}
+        // 設定 (モーダルの dialog) の上には独自の確認画面を重ねられないため、閉じてから開く。
+        // 予約後に一覧の上の帯が見えるよう、引き出しも閉じる
+        onDeleteTrip={() => {
+          settingsRef.current?.close()
+          setDrawer(false)
+          setAskingDelete(true)
+        }}
+        onCancelTripDeletion={cancelTripDeletion}
+      />
     </div>
   )
 }

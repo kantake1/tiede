@@ -24,6 +24,8 @@ jobs:
           distribution: temurin
           java-version: 21
       - run: npm ci
+      # Cloud Functions (削除予約の自動削除)。型チェックし、tests/purge.test.ts が firebase-admin を使う
+      - run: npm ci --prefix functions && npm run build --prefix functions
       - run: npm install -g firebase-tools
       - run: npm run lint
       - run: npm test
