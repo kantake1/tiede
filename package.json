@@ -10,7 +10,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:rules": "firebase emulators:exec --only firestore --project demo-tiede 'vitest run tests/rules'",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-tiede 'vitest run --dir tests rules'",
     "e2e": "firebase emulators:exec --only firestore --project demo-tiede 'playwright test'"
   },
   "dependencies": {
