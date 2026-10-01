@@ -46,7 +46,7 @@
 
 ## デザイン
 
-- `docs/design/DESIGN.md` に従う (Airbnb ベース、サイドバーは Airtable、列の区切りは Cal.com)。色は `src/index.css` 冒頭のトークンだけを使う。Rausch (`--accent`) は主要操作専用
+- `docs/design/DESIGN.md` に従う (Airbnb ベース、サイドバーは Airtable、列の区切りは Cal.com、面は Liquid Glass の浮いたガラス)。色は `src/index.css` 冒頭のトークンだけを使う。Rausch (`--accent`) は主要操作専用
 
 ## 開発の流れ
 

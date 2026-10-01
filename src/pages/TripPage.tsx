@@ -1,4 +1,4 @@
-import { Archive, ArchiveRestore, Check, Clock, Link2, Menu, Plus } from 'lucide-react'
+import { Archive, ArchiveRestore, Clock, Menu, Plus } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import { useConfirm } from '../components/ConfirmDialog'
 import { DeletedList } from '../components/DeletedList'
@@ -216,9 +216,6 @@ export function TripPage({ tripId }: { tripId: string }) {
             {syncLabel && <span className={`sync ${online ? '' : 'offline'}`}>{syncLabel}</span>}
           </div>
         </div>
-        <button className="ghost icon" onClick={share} aria-label="URLを共有">
-          {copied ? <Check size={20} /> : <Link2 size={20} />}
-        </button>
       </header>
 
       <EditorPanel

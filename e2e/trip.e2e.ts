@@ -203,6 +203,23 @@ test('広い画面: 格納を選んでいてもサイドバー幅の取っ手が
   await expect(page.getByRole('separator', { name: /サイドバーの幅/ })).toBeAttached()
 })
 
+test('広い画面: サイドバー幅は矢印キー1回で 16px 広がる', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/')
+  await page.getByPlaceholder('例: いつものメンバー').fill('幅')
+  await page.getByLabel('追加するメンバーの名前').fill('Aさん, Bさん')
+  await page.locator('button[type="submit"]').click()
+  await page.waitForURL(/\/t\/.+/)
+  await expect(page.locator('.sidebar')).toBeVisible()
+  const track = () =>
+    page.evaluate(
+      () => document.querySelector('.sidebar')!.getBoundingClientRect().right - document.querySelector('.layout')!.getBoundingClientRect().left,
+    )
+  await expect.poll(track).toBe(240)
+  await page.getByRole('separator', { name: /サイドバーの幅/ }).press('ArrowRight')
+  await expect.poll(track).toBe(256)
+})
+
 test('最近開いたグループ: 履歴から消しても元に戻せる', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/')
