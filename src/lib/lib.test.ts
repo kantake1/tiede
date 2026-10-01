@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { dateOf, formatDate, groupByDate, toDateKey } from './date'
 import { friendlyError } from './errors'
 import { parseNumber, yen } from './format'
-import { splitNames } from './names'
+import { groupOwed, splitNames, whoLabel } from './names'
 import { forgetRecent, getRecent, restoreRecent, touchRecent } from './recent'
 import { settlementText } from './shareText'
 import { loadFlag, loadJson, saveFlag, saveJson } from './storage'
@@ -141,5 +141,25 @@ describe('splitDeleted', () => {
     const r = splitDeleted([e('b', 2), e('x', 1, 10), e('a', 1), e('y', 2, 20)])
     expect(r.expenses.map((x) => x.id)).toEqual(['a', 'b'])
     expect(r.deleted.map((x) => x.id)).toEqual(['y', 'x'])
+  })
+})
+
+describe('大人数の要約', () => {
+  const all = ['a', 'b', 'c', 'd']
+  const nameOf = (id: string) => id.toUpperCase()
+
+  it('対象者を全員 / 1人 / 2人 / ほかN人 にまとめる', () => {
+    expect(whoLabel(all, all, nameOf)).toBe('全員')
+    expect(whoLabel(all, all, nameOf, true)).toBe('全員 (4人)')
+    expect(whoLabel(['b'], all, nameOf)).toBe('B')
+    expect(whoLabel(['b'], all, nameOf, true)).toBe('Bだけ')
+    expect(whoLabel(['a', 'c'], all, nameOf)).toBe('A・C')
+    expect(whoLabel(['a', 'b', 'd'], all, nameOf)).toBe('A・B ほか1人')
+  })
+
+  it('負担額をいちばん多い額でまとめ、違う額の人だけ残す', () => {
+    expect(groupOwed([['a', 1010], ['b', 1000], ['c', 1000]])).toEqual({ each: { count: 2, amount: 1000 }, rest: [['a', 1010]] })
+    expect(groupOwed([['a', 1], ['b', 2]])).toEqual({ each: null, rest: [['a', 1], ['b', 2]] })
+    expect(groupOwed([])).toEqual({ each: null, rest: [] })
   })
 })

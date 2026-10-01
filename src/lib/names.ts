@@ -20,3 +20,24 @@ export function askName(message: string, max: number, opts: { current?: string; 
 
 /** 入力欄の文字をメンバー名に分ける。カンマ・改行区切りの貼り付けはまとめて扱う */
 export const splitNames = (text: string) => [...new Set(text.split(/[\n,、，]/).map((s) => s.trim()).filter(Boolean))]
+
+/**
+ * 対象者の要約: 全員 / 田中 / 佐藤・田中 / 佐藤・田中 ほか2人。
+ * ids はメンバー順に並べて渡す。withCount は入力欄向け (全員 (12人) / 田中だけ)
+ */
+export function whoLabel(ids: string[], allIds: string[], nameOf: (id: string) => string, withCount = false): string {
+  if (allIds.length > 0 && allIds.every((id) => ids.includes(id))) return withCount ? `全員 (${allIds.length}人)` : '全員'
+  const names = ids.map(nameOf)
+  if (names.length === 1) return withCount ? `${names[0]}だけ` : names[0]
+  if (names.length <= 2) return names.join('・')
+  return `${names.slice(0, 2).join('・')} ほか${names.length - 2}人`
+}
+
+/** 負担額をいちばん多い額でまとめる (N人 各¥X)。2人以上の同額が無ければ each は null で全員を rest に残す */
+export function groupOwed(entries: [string, number][]): { each: { count: number; amount: number } | null; rest: [string, number][] } {
+  const count = new Map<number, number>()
+  for (const [, v] of entries) count.set(v, (count.get(v) ?? 0) + 1)
+  const [amount, n] = [...count].reduce((a, b) => (b[1] > a[1] ? b : a), [0, 0])
+  if (n < 2) return { each: null, rest: entries }
+  return { each: { count: n, amount }, rest: entries.filter(([, v]) => v !== amount) }
+}

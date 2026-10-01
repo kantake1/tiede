@@ -2,10 +2,12 @@ import { Check, ChevronRight, ChevronUp, ReceiptText } from 'lucide-react'
 import { useState } from 'react'
 import { formatDate, groupByDate } from '../lib/date'
 import { yen } from '../lib/format'
+import { whoLabel } from '../lib/names'
 import { loadFlag, saveFlag } from '../lib/storage'
 import { settledOf } from '../lib/settle'
 import { computeOwed } from '../lib/split'
 import type { Expense } from '../types'
+import { OwedSummary } from './SharesEditor'
 
 type Props = {
   expenses: Expense[]
@@ -29,6 +31,8 @@ export function ExpenseList({ expenses, nameOf, memberIds, categoryOf, editingId
   const [compact, setCompact] = useState(() => loadFlag(COMPACT_KEY))
   // コンパクトで開いている1件
   const [openId, setOpenId] = useState<string | null>(null)
+  // 「ほかN人」を押して全員の名前を出している品目 (支払い ID:行)
+  const [shownNames, setShownNames] = useState<string | null>(null)
   if (expenses.length === 0) return null
   // 削除済みメンバーは末尾
   const order = (id: string) => {
@@ -125,13 +129,27 @@ export function ExpenseList({ expenses, nameOf, memberIds, categoryOf, editingId
                       <ChevronRight size={14} className="chevron" /> 品目 ({e.items.length})
                     </summary>
                     <ul className="item-lines">
-                      {e.items.map((it, i) => (
-                        <li key={i}>
-                          <span className="grow">{it.name}</span>
-                          <span className="muted">{it.memberIds.map(nameOf).join('・')}</span>
-                          <span>{yen(it.price)}</span>
-                        </li>
-                      ))}
+                      {e.items.map((it, i) => {
+                        const ids = [...it.memberIds].sort((a, b) => order(a) - order(b))
+                        const key = `${e.id}:${i}`
+                        return (
+                          <li key={i}>
+                            <span className="grow">{it.name}</span>
+                            {ids.length > 2 && !memberIds.every((id) => ids.includes(id)) ? (
+                              <button
+                                className="item-who"
+                                aria-expanded={shownNames === key}
+                                onClick={() => setShownNames(shownNames === key ? null : key)}
+                              >
+                                {shownNames === key ? ids.map(nameOf).join('・') : whoLabel(ids, memberIds, nameOf)}
+                              </button>
+                            ) : (
+                              <span className="muted">{whoLabel(ids, memberIds, nameOf)}</span>
+                            )}
+                            <span>{yen(it.price)}</span>
+                          </li>
+                        )
+                      })}
                     </ul>
                   </details>
                 )}
@@ -139,18 +157,24 @@ export function ExpenseList({ expenses, nameOf, memberIds, categoryOf, editingId
                 {open && (
                   <div className="row">
                     <div className="grow muted small">
-                      {Object.entries(owed)
-                        .filter(([, v]) => v > 0)
-                        .sort(([a], [b]) => order(a) - order(b))
-                        .map(([id, v], i) => (
-                          <span key={id}>
-                            {i > 0 && ' / '}
-                            <span className={`owed-item ${settled[id] ? 'paid' : ''}`}>
-                              {settled[id] && <Check size={12} aria-label="受取済み" />}
-                              {nameOf(id)} {yen(v)}
-                            </span>
+                      <OwedSummary
+                        entries={Object.entries(owed)
+                          .filter(([, v]) => v > 0)
+                          .sort(([a], [b]) => order(a) - order(b))}
+                        nameOf={nameOf}
+                      />
+                      {settledCount > 0 && (
+                        <>
+                          {' · '}
+                          <span className="owed-paid">
+                            <Check size={12} aria-hidden /> 受取済み:{' '}
+                            {Object.keys(settled)
+                              .sort((a, b) => order(a) - order(b))
+                              .map(nameOf)
+                              .join('・')}
                           </span>
-                        ))}
+                        </>
+                      )}
                     </div>
                     <button className="ghost small" onClick={() => onEdit(e)}>
                       編集
