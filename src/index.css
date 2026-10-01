@@ -1576,6 +1576,81 @@ label.button.danger-fill:hover {
   filter: brightness(0.92);
 }
 
+/* 淡い赤に白文字では読めないため、無効時は灰色の面と薄墨の文字にする (button.primary と同じ) */
+button.danger-fill:disabled {
+  opacity: 1;
+  filter: none;
+  background: var(--surface-strong);
+  border-color: var(--surface-strong);
+  color: var(--muted);
+}
+
+/* グループの削除 (#6) */
+.modal.wide {
+  width: min(400px, 100%);
+}
+
+.impact {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.impact li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+}
+
+.impact li + li {
+  border-top: 1px solid var(--border);
+}
+
+.impact .n {
+  margin-left: auto;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.impact-confirm {
+  margin-top: 14px;
+}
+
+/* 設定のいちばん下。危険な操作は赤い文字と枠線だけ (塗りは最終確認だけ) */
+.danger-zone h2 {
+  color: var(--danger);
+}
+
+.danger-zone button.danger {
+  border-color: var(--danger);
+}
+
+/* 削除予約中: URL を持つ全員の一覧の上に出す。閉じられない */
+.pending-delete {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.pending-delete-title {
+  font-weight: 600;
+}
+
+.pending-delete button {
+  margin-top: 6px;
+}
+
+/* 削除済み: 猶予中は「完全に削除」の代わりに、いつから消せるかを書く (#42) */
+.purge-wait {
+  text-align: right;
+}
+
 /* イベントの削除: デスクトップは金額の右に薄いゴミ箱、マウスを乗せると赤 */
 .sb-row {
   display: flex;

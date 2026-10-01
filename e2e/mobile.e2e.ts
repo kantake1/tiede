@@ -64,4 +64,15 @@ test('スマホ: ＋から全画面で追加し、引き出しのイベントを
   await trash.click()
   await page.getByRole('alertdialog').getByRole('button', { name: '削除' }).click()
   await expect(page.locator('.sidebar .sb-row', { hasText: '旅行' })).toHaveCount(0)
+
+  // グループの削除予約: 設定から予約すると一覧の上に帯が出て、そこから取り消せる
+  await page.locator('.sidebar').getByRole('button', { name: '設定' }).click()
+  await page.getByRole('button', { name: 'グループを削除…' }).click()
+  await page.getByLabel('確認のため、グループ名を入力してください').fill('スマホ旅行')
+  await page.getByRole('alertdialog').getByRole('button', { name: '削除を予約' }).click()
+  const bar = page.locator('.pending-delete')
+  await expect(bar).toBeInViewport()
+  await expectNoHorizontalScroll(page)
+  await bar.getByRole('button', { name: '削除を取り消す' }).click()
+  await expect(bar).toHaveCount(0)
 })

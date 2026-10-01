@@ -3,7 +3,6 @@ import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check'
 import {
   collection,
   connectFirestoreEmulator,
-  deleteDoc,
   deleteField,
   doc,
   getDoc,
@@ -20,6 +19,7 @@ import {
   type DocumentData,
 } from 'firebase/firestore'
 import { WRITE_ERROR_EVENT } from '../lib/errors'
+import { isMemberReferenced } from '../lib/tripView'
 import type { Category, Expense, Member, Trip } from '../types'
 import { splitDeleted, type TripStore } from './types'
 
@@ -87,12 +87,20 @@ function write(p: Promise<unknown>): Promise<void> {
   })
 }
 
-const toMember = (id: string, d: DocumentData): Member => ({ id, name: d.name, createdAt: millis(d.createdAt) })
-const toCategory = (id: string, d: DocumentData): Category => ({
+// メンバー・イベントの削除は removedAt を付けるだけ (ルールで実際の削除を禁止。#42)
+type Removable<T> = T & { removed: boolean }
+const toMember = (id: string, d: DocumentData): Removable<Member> => ({
+  id,
+  name: d.name,
+  createdAt: millis(d.createdAt),
+  removed: 'removedAt' in d,
+})
+const toCategory = (id: string, d: DocumentData): Removable<Category> => ({
   id,
   name: d.name,
   archived: d.archived === true,
   createdAt: millis(d.createdAt),
+  removed: 'removedAt' in d,
 })
 const toExpense = (id: string, d: DocumentData): Expense => ({
   id,
@@ -108,6 +116,7 @@ const toExpense = (id: string, d: DocumentData): Expense => ({
   hasReceipt: d.hasReceipt === true,
   settledIds: d.settledIds,
   deletedAt: d.deletedAt,
+  trashedAt: 'trashedAt' in d ? millis(d.trashedAt) : undefined,
   createdAt: millis(d.createdAt),
 })
 
@@ -127,17 +136,25 @@ export const firestoreStore: TripStore = {
 
   subscribe(tripId, onData, onError) {
     let trip: Trip | null | undefined
-    let ms: Member[] | undefined
-    let cs: Category[] | undefined
+    let ms: Removable<Member>[] | undefined
+    let cs: Removable<Category>[] | undefined
     let es: Expense[] | undefined
     const pending = [false, false, false, false]
     const emit = () => {
       if (trip === undefined || ms === undefined || cs === undefined || es === undefined) return
       if (trip === null) return onData(null)
+      // 削除したメンバーでも、支払いに使われていれば残す (他の端末やいたずらで消されても精算が崩れないように)
+      const all = es
       onData({
         trip,
-        members: [...ms].sort((a, b) => a.createdAt - b.createdAt),
-        categories: [...cs].sort((a, b) => a.createdAt - b.createdAt),
+        members: ms
+          .filter((m) => !m.removed || isMemberReferenced(all, m.id))
+          .map((m): Member => ({ id: m.id, name: m.name, createdAt: m.createdAt }))
+          .sort((a, b) => a.createdAt - b.createdAt),
+        categories: cs
+          .filter((c) => !c.removed)
+          .map((c): Category => ({ id: c.id, name: c.name, archived: c.archived, createdAt: c.createdAt }))
+          .sort((a, b) => a.createdAt - b.createdAt),
         ...splitDeleted(es),
         pending: pending.some(Boolean),
       })
@@ -164,7 +181,15 @@ export const firestoreStore: TripStore = {
           pending[0] = s.metadata.hasPendingWrites
           // 端末に無く、まだサーバーからも取れていない間は「無い」と判定しない
           if (!s.exists() && s.metadata.fromCache) return
-          trip = s.exists() ? { id: s.id, name: s.data().name, createdAt: millis(s.data().createdAt) } : null
+          const d = s.data()
+          trip = d
+            ? {
+                id: s.id,
+                name: d.name,
+                createdAt: millis(d.createdAt),
+                deleteRequestedAt: 'deleteRequestedAt' in d ? millis(d.deleteRequestedAt) : undefined,
+              }
+            : null
           emit()
         },
         err,
@@ -178,11 +203,16 @@ export const firestoreStore: TripStore = {
 
   renameTrip: (tripId, name) => write(updateDoc(doc(trips(), tripId), { name })),
 
+  // サーバー時刻で記録し、端末の時刻で猶予を縮められないようにする (ルールで検証)
+  requestTripDeletion: (tripId) => write(updateDoc(doc(trips(), tripId), { deleteRequestedAt: serverTimestamp() })),
+
+  cancelTripDeletion: (tripId) => write(updateDoc(doc(trips(), tripId), { deleteRequestedAt: deleteField() })),
+
   addMember: (tripId, name) => write(setDoc(doc(members(tripId)), { name, createdAt: serverTimestamp() })),
 
   renameMember: (tripId, memberId, name) => write(updateDoc(doc(members(tripId), memberId), { name })),
 
-  removeMember: (tripId, memberId) => write(deleteDoc(doc(members(tripId), memberId))),
+  removeMember: (tripId, memberId) => write(updateDoc(doc(members(tripId), memberId), { removedAt: serverTimestamp() })),
 
   async addCategory(tripId, name) {
     // ID は端末で決まるので、受領を待たずに返す (圏外でイベントを作ってすぐ選べるように)。失敗は後から通知
@@ -195,7 +225,7 @@ export const firestoreStore: TripStore = {
 
   renameCategory: (tripId, categoryId, name) => write(updateDoc(doc(categories(tripId), categoryId), { name })),
 
-  removeCategory: (tripId, categoryId) => write(deleteDoc(doc(categories(tripId), categoryId))),
+  removeCategory: (tripId, categoryId) => write(updateDoc(doc(categories(tripId), categoryId), { removedAt: serverTimestamp() })),
 
   setCategoryArchived: (tripId, categoryId, archived) => write(updateDoc(doc(categories(tripId), categoryId), { archived })),
 
@@ -218,9 +248,12 @@ export const firestoreStore: TripStore = {
     return write(batch.commit())
   },
 
-  deleteExpense: (tripId, expenseId) => write(updateDoc(doc(expenses(tripId), expenseId), { deletedAt: Date.now() })),
+  // trashedAt (サーバー時刻) から猶予が過ぎるまで、ルールで完全な削除を禁止する (#42)
+  deleteExpense: (tripId, expenseId) =>
+    write(updateDoc(doc(expenses(tripId), expenseId), { deletedAt: Date.now(), trashedAt: serverTimestamp() })),
 
-  restoreExpense: (tripId, expenseId) => write(updateDoc(doc(expenses(tripId), expenseId), { deletedAt: deleteField() })),
+  restoreExpense: (tripId, expenseId) =>
+    write(updateDoc(doc(expenses(tripId), expenseId), { deletedAt: deleteField(), trashedAt: deleteField() })),
 
   purgeExpense(tripId, expenseId) {
     const batch = writeBatch(db)

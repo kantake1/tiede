@@ -4,6 +4,7 @@ import { assertFails, assertSucceeds, initializeTestEnvironment, type RulesTestE
 import {
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -93,12 +94,11 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)('firestore.rules', () => {
     await assertSucceeds(setDoc(e, expense({ memo: 'x'.repeat(1000), date: '2026-09-30', hasReceipt: true, categoryId: 'c1', settledIds: ['m2'], deletedAt: 1 })))
   })
 
-  it('支払いの更新で createdAt は変えられない (削除後の復元は同じ ID で作り直す)', async () => {
+  it('支払いの更新で createdAt は変えられない', async () => {
     const e = doc(trip(), 'expenses', 'e1')
     await assertSucceeds(setDoc(e, expense({})))
     await assertSucceeds(updateDoc(e, { amount: 5000 }))
     await assertFails(updateDoc(e, { createdAt: Timestamp.fromMillis(0) }))
-    await assertSucceeds(deleteDoc(e))
   })
 
   it('レシート写真は約300KB (41万文字) まで', async () => {
@@ -108,23 +108,89 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)('firestore.rules', () => {
     await assertFails(setDoc(r, { data: '', createdAt: serverTimestamp() }))
   })
 
-  it('移行期間 (#42): 新版の論理削除と旧版の削除がどちらも通る', async () => {
-    const m = doc(db, 'trips', 't1', 'members', 'm1')
-    const c = doc(db, 'trips', 't1', 'categories', 'c1')
-    const e = doc(db, 'trips', 't1', 'expenses', 'e1')
-    await assertSucceeds(setDoc(m, { name: 'たろう', createdAt: serverTimestamp() }))
-    await assertSucceeds(setDoc(c, { name: '旅行', createdAt: serverTimestamp() }))
-    await assertSucceeds(setDoc(e, expense({})))
-    // 新版
-    await assertSucceeds(updateDoc(m, { removedAt: serverTimestamp() }))
-    await assertSucceeds(updateDoc(c, { removedAt: serverTimestamp() }))
-    await assertFails(updateDoc(c, { removedAt: 'x' }))
-    await assertSucceeds(updateDoc(e, { deletedAt: Date.now(), trashedAt: serverTimestamp() }))
-    await assertFails(updateDoc(e, { trashedAt: 1 }))
-    // 旧版
-    await assertSucceeds(updateDoc(e, { deletedAt: Date.now() }))
-    await assertSucceeds(deleteDoc(e))
-    await assertSucceeds(deleteDoc(m))
-    await assertSucceeds(deleteDoc(c))
+  describe('削除の猶予 (#42)', () => {
+    const DAY = 24 * 60 * 60 * 1000
+    const ago = (days: number) => Timestamp.fromMillis(Date.now() - days * DAY)
+    // ルールを通さずに書く (本番に既にある形のデータや、猶予が過ぎた状態を作る)
+    const seed = (path: string, data: object) =>
+      env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), path), data))
+    const legacyExpense = { title: '夕食', amount: 3000, payerId: 'm1', mode: 'equal', shares: { m1: 1 }, createdAt: ago(30) }
+
+    it('支払いは「削除済み」に移すときサーバー時刻が要り、猶予 (7日) が過ぎるまで完全に削除できない', async () => {
+      const e = doc(trip(), 'expenses', 'e1')
+      await assertSucceeds(setDoc(e, expense({})))
+      await assertFails(deleteDoc(e))
+      await assertFails(updateDoc(e, { deletedAt: Date.now() }))
+      await assertFails(updateDoc(e, { deletedAt: Date.now(), trashedAt: ago(8) }))
+      await assertSucceeds(updateDoc(e, { deletedAt: Date.now(), trashedAt: serverTimestamp() }))
+      await assertFails(deleteDoc(e))
+      // trashedAt だけ消して古い削除済みに見せかけることも、時刻を古くすることもできない
+      await assertFails(updateDoc(e, { trashedAt: deleteField() }))
+      await assertFails(updateDoc(e, { deletedAt: 1 }))
+      // 元に戻すのは誰でもすぐできる
+      await assertSucceeds(updateDoc(e, { deletedAt: deleteField(), trashedAt: deleteField() }))
+      await assertFails(updateDoc(e, { trashedAt: serverTimestamp() }))
+    })
+
+    it('猶予が過ぎた削除済みは写真ごと完全に削除できる', async () => {
+      await seed('trips/t1/expenses/e1', { ...legacyExpense, hasReceipt: true, deletedAt: Date.now() - 8 * DAY, trashedAt: ago(8) })
+      await seed('trips/t1/receipts/e1', { data: 'a', createdAt: ago(30) })
+      const b = writeBatch(db)
+      b.delete(doc(trip(), 'expenses', 'e1'))
+      b.delete(doc(trip(), 'receipts', 'e1'))
+      await assertSucceeds(b.commit())
+    })
+
+    it('既存データ: このルールより前に削除済みにした支払い (trashedAt 無し) は読めて、戻せて、完全に削除できる', async () => {
+      await seed('trips/t1/expenses/old1', { ...legacyExpense, deletedAt: Date.now() - DAY })
+      await seed('trips/t1/expenses/old2', { ...legacyExpense, deletedAt: Date.now() - DAY })
+      await assertSucceeds(getDoc(doc(trip(), 'expenses', 'old1')))
+      await assertSucceeds(updateDoc(doc(trip(), 'expenses', 'old1'), { deletedAt: deleteField() }))
+      await assertSucceeds(deleteDoc(doc(trip(), 'expenses', 'old2')))
+    })
+
+    it('既存データ: 古い形の支払い (date・hasReceipt・settledIds 無し) を編集・削除済みにできる', async () => {
+      await seed('trips/t1/expenses/old', legacyExpense)
+      const e = doc(trip(), 'expenses', 'old')
+      await assertSucceeds(updateDoc(e, { amount: 4000, date: '2026-09-30', settledIds: ['m2'] }))
+      await assertSucceeds(updateDoc(e, { deletedAt: Date.now(), trashedAt: serverTimestamp() }))
+    })
+
+    it('メンバー・イベントは削除できず、removedAt (サーバー時刻) を付ける。既存の形のまま名前変更・アーカイブもできる', async () => {
+      await seed('trips/t1/members/m1', { name: 'たろう', createdAt: ago(30) })
+      await seed('trips/t1/categories/c1', { name: '旅行', createdAt: ago(30) })
+      const m = doc(trip(), 'members', 'm1')
+      const c = doc(trip(), 'categories', 'c1')
+      await assertFails(deleteDoc(m))
+      await assertFails(deleteDoc(c))
+      await assertSucceeds(updateDoc(m, { name: 'じろう' }))
+      await assertSucceeds(updateDoc(c, { name: '鍋パ', archived: true }))
+      await assertFails(updateDoc(m, { removedAt: ago(1) }))
+      await assertFails(updateDoc(c, { removedAt: 1 }))
+      await assertSucceeds(updateDoc(m, { removedAt: serverTimestamp() }))
+      await assertSucceeds(updateDoc(c, { removedAt: serverTimestamp() }))
+      await assertSucceeds(updateDoc(c, { removedAt: deleteField() }))
+    })
+
+    it('グループは削除予約でき、誰でも取り消せる。猶予が過ぎるまで中身もグループも消せない', async () => {
+      await seed('trips/t1/members/m1', { name: 'たろう', createdAt: ago(30) })
+      await assertFails(updateDoc(trip(), { deleteRequestedAt: ago(8) }))
+      await assertSucceeds(updateDoc(trip(), { deleteRequestedAt: serverTimestamp() }))
+      await assertFails(deleteDoc(doc(trip(), 'members', 'm1')))
+      await assertFails(deleteDoc(trip()))
+      await assertSucceeds(updateDoc(trip(), { name: '予約中も編集できる' }))
+      await assertSucceeds(updateDoc(trip(), { deleteRequestedAt: deleteField() }))
+    })
+
+    it('予約から猶予が過ぎても、端末からはグループも中身も消せない (Cloud Functions が消す)', async () => {
+      await seed('trips/t2', { name: '消すグループ', createdAt: ago(30), deleteRequestedAt: ago(8) })
+      await seed('trips/t2/members/m1', { name: 'x', createdAt: ago(30) })
+      await seed('trips/t2/categories/c1', { name: 'x', createdAt: ago(30) })
+      await seed('trips/t2/expenses/e1', legacyExpense)
+      await assertFails(deleteDoc(doc(db, 'trips/t2/members/m1')))
+      await assertFails(deleteDoc(doc(db, 'trips/t2/categories/c1')))
+      await assertFails(deleteDoc(doc(db, 'trips/t2/expenses/e1')))
+      await assertFails(deleteDoc(doc(db, 'trips', 't2')))
+    })
   })
 })

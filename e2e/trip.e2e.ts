@@ -20,6 +20,19 @@ async function addExpense(
   await expect(page.locator('.expense', { hasText: e.title })).toBeVisible()
 }
 
+// 猶予 (7日) が過ぎた状態を作る: エミュレータの REST (ルールを通らない) で、削除済みの支払いの trashedAt を古くする
+async function ageTrash(page: Page, days: number) {
+  const tripId = new URL(page.url()).pathname.split('/t/')[1]
+  const base = `http://127.0.0.1:8080/v1/projects/demo-tiede/databases/(default)/documents/trips/${tripId}/expenses`
+  const headers = { Authorization: 'Bearer owner' }
+  const list = (await (await fetch(base, { headers })).json()) as { documents: { name: string; fields: Record<string, unknown> }[] }
+  const at = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
+  for (const d of list.documents.filter((x) => 'trashedAt' in x.fields)) {
+    const url = `http://127.0.0.1:8080/v1/${d.name}?updateMask.fieldPaths=trashedAt`
+    await fetch(url, { method: 'PATCH', headers, body: JSON.stringify({ fields: { trashedAt: { timestampValue: at } } }) })
+  }
+}
+
 const allTotal = (page: Page) => page.locator('.sidebar .sb-cats label', { hasText: 'すべて' }).locator('.muted.small')
 
 test('旅行の立て替えを記録して精算する', async ({ page, browser }) => {
@@ -295,7 +308,7 @@ test('大人数: 均等の負担額は1行にまとめ、品目の対象者は�
 })
 
 
-test('削除した支払いは「削除済み」から元に戻す・完全に削除できる', async ({ page }) => {
+test('削除した支払いは「削除済み」から元に戻せ、7日たつと完全に削除できる', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/')
   await page.getByPlaceholder('例: いつものメンバー').fill('削除済み')
@@ -318,9 +331,44 @@ test('削除した支払いは「削除済み」から元に戻す・完全に�
   await page.locator('.expense.deleted', { hasText: '昼食' }).getByRole('button', { name: '元に戻す' }).click()
   await expect(allTotal(page)).toContainText('2,000')
 
-  // 完全に削除すると削除済みが0件になり、通常の一覧に戻る
-  await page.locator('.expense.deleted', { hasText: '夕食' }).getByRole('button', { name: '完全に削除' }).click()
+  // 猶予中は「完全に削除」を出さず、いつから消せるかを書く (ルールでも拒否される)
+  const dinner = page.locator('.expense.deleted', { hasText: '夕食' })
+  await expect(dinner).toContainText('から完全に削除できます')
+  await expect(dinner.getByRole('button', { name: '完全に削除' })).toHaveCount(0)
+
+  // 7日たつと完全に削除でき、削除済みが0件になって通常の一覧に戻る
+  await ageTrash(page, 8)
+  await dinner.getByRole('button', { name: '完全に削除' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: '完全に削除' }).click()
   await expect(page.getByRole('button', { name: /削除済み/ })).toHaveCount(0)
   await expect(page.locator('.expense')).toHaveText([/昼食/])
+})
+
+test('グループの削除を予約すると全員に知らせ、誰でも取り消せる', async ({ page, browser }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/')
+  await page.getByPlaceholder('例: いつものメンバー').fill('消すグループ')
+  await page.getByLabel('追加するメンバーの名前').fill('Aさん, Bさん')
+  await page.locator('button[type="submit"]').click()
+  await page.waitForURL(/\/t\/.+/)
+
+  // 設定のいちばん下から。グループ名を入力するまで確定できない
+  await page.getByRole('button', { name: '設定' }).click()
+  await page.getByRole('button', { name: 'グループを削除…' }).click()
+  const dialog = page.getByRole('alertdialog')
+  await expect(dialog).toContainText('メンバー2人')
+  const ok = dialog.getByRole('button', { name: '削除を予約' })
+  await expect(ok).toBeDisabled()
+  await dialog.getByLabel('確認のため、グループ名を入力してください').fill('消すグループ')
+  await ok.click()
+
+  // 別の端末で開いても、削除予定の帯が出る。そこから取り消すと消える
+  const other = await browser.newPage()
+  await other.goto(page.url())
+  const bar = other.locator('.pending-delete')
+  await expect(bar).toContainText('以降に削除されます')
+  await bar.getByRole('button', { name: '削除を取り消す' }).click()
+  await expect(bar).toHaveCount(0)
+  await expect(page.locator('.pending-delete')).toHaveCount(0)
+  await other.close()
 })

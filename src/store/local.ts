@@ -70,6 +70,15 @@ export const localStore: TripStore = {
     mutate(tripId, (t) => (t.trip.name = name))
   },
 
+  // ローカルモードには自動で消す仕組みが無いため、予約の印だけ付ける
+  async requestTripDeletion(tripId) {
+    mutate(tripId, (t) => (t.trip.deleteRequestedAt = Date.now()))
+  },
+
+  async cancelTripDeletion(tripId) {
+    mutate(tripId, (t) => delete t.trip.deleteRequestedAt)
+  },
+
   async addMember(tripId, name) {
     mutate(tripId, (t) => t.members.push({ id: newId(), name, createdAt: Date.now() }))
   },
@@ -113,11 +122,17 @@ export const localStore: TripStore = {
   },
 
   async deleteExpense(tripId, expenseId) {
-    mutate(tripId, (t) => t.expenses.forEach((x) => x.id === expenseId && (x.deletedAt = Date.now())))
+    mutate(tripId, (t) => t.expenses.forEach((x) => x.id === expenseId && (x.deletedAt = x.trashedAt = Date.now())))
   },
 
   async restoreExpense(tripId, expenseId) {
-    mutate(tripId, (t) => t.expenses.forEach((x) => x.id === expenseId && delete x.deletedAt))
+    mutate(tripId, (t) =>
+      t.expenses.forEach((x) => {
+        if (x.id !== expenseId) return
+        delete x.deletedAt
+        delete x.trashedAt
+      }),
+    )
   },
 
   async purgeExpense(tripId, expenseId) {
