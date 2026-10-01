@@ -67,5 +67,4 @@
 
 - Firebase プロジェクト `tiede-8eae4` (Firestore: asia-northeast1, Standard)。ルールはデプロイ・検証済み。Hosting 公開済み (https://tiede-8eae4.web.app、`main` へのマージで自動公開。手動は `firebase deploy --only hosting`)
 - App Check: reCAPTCHA v3 (Enterprise は課金アカウントが必要なため不採用)。実機ブラウザで検証済み (自動テストのヘッドレス Chromium はボット判定で通らない)。AI Logic は強制済み、Firestore は未強制 (コンソールで検証済みリクエストの割合を確認してから強制する)。開発時は `.env.local` の `VITE_APPCHECK_DEBUG_TOKEN` (コンソール登録済み) を使う
-- 候補: 実機 iPhone で PWA (ホーム画面追加・圏外起動)・Safari の表示を確認する
 - Service Worker のキャッシュ名 (`oaiko-<ハッシュ>`) はビルドごとに自動で変わる (`vite.config.ts` の `swCacheName`)
