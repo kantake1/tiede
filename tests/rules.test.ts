@@ -88,7 +88,8 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)('firestore.rules', () => {
     await assertFails(setDoc(e, expense({ memo: 'x'.repeat(1001) })))
     await assertFails(setDoc(e, expense({ date: '2026/09/30' })))
     await assertFails(setDoc(e, expense({ extra: 1 })))
-    await assertSucceeds(setDoc(e, expense({ memo: 'x'.repeat(1000), date: '2026-09-30', hasReceipt: true, categoryId: 'c1' })))
+    await assertFails(setDoc(e, expense({ settledIds: 'm2' })))
+    await assertSucceeds(setDoc(e, expense({ memo: 'x'.repeat(1000), date: '2026-09-30', hasReceipt: true, categoryId: 'c1', settledIds: ['m2'] })))
   })
 
   it('支払いの更新で createdAt は変えられない (削除後の復元は同じ ID で作り直す)', async () => {

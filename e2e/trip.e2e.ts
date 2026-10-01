@@ -185,3 +185,22 @@ test('最近開いたグループ: 履歴から消しても元に戻せる', asy
   await page.getByRole('button', { name: '元に戻す' }).click()
   await expect(page.getByRole('link', { name: '履歴', exact: true })).toBeVisible()
 })
+
+
+test('受取済みの人はその支払いの精算から外れる', async ({ page }) => {
+  await page.goto('/')
+  await page.getByPlaceholder('例: いつものメンバー').fill('受取')
+  await page.getByLabel('追加するメンバーの名前').fill('Aさん, Bさん, Cさん')
+  await page.locator('button[type="submit"]').click()
+  await page.waitForURL(/\/t\/.+/)
+
+  const f = form(page)
+  await f.getByPlaceholder('例: 食事代').fill('焼肉')
+  await f.getByPlaceholder('12000').fill('3000')
+  await expect(f.getByRole('button', { name: 'Aさん から受取済み' })).toHaveCount(0) // 立て替えた本人には付けられない
+  await f.getByRole('button', { name: 'Bさん から受取済み' }).click()
+  await f.getByRole('button', { name: '追加', exact: true }).click()
+
+  await expect(page.locator('.expense', { hasText: '焼肉' })).toContainText('受取済み 1人')
+  await expect(page.locator('.transfers li')).toHaveText([/Cさん.*Aさん.*1,000/])
+})

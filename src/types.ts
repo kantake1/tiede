@@ -32,6 +32,8 @@ export type Expense = {
   date?: string
   /** レシート写真を保存している (写真本体は receipts に別保存) */
   hasReceipt?: boolean
+  /** その場で負担分を受け取った人。精算から外す */
+  settledIds?: string[]
   createdAt: number
 }
 

@@ -101,6 +101,7 @@ const toExpense = (id: string, d: DocumentData): Expense => ({
   memo: d.memo,
   date: d.date,
   hasReceipt: d.hasReceipt === true,
+  settledIds: d.settledIds,
   createdAt: millis(d.createdAt),
 })
 

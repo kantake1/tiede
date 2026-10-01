@@ -1,5 +1,6 @@
 import { yen } from '../lib/format'
 import type { Member, SplitMode } from '../types'
+import { SettledToggle } from './SettledToggle'
 
 type Props = {
   members: Member[]
@@ -16,10 +17,13 @@ type Props = {
   onFillRemainder: () => void
   /** 各自の負担額 (入力エラーがあれば null) */
   preview: Record<string, number> | null
+  payerId: string
+  settled: string[]
+  onToggleSettled: (id: string) => void
 }
 
 /** 割り方「均等・比率・金額」: 対象者と各自の比率・金額 */
-export function SharesEditor({ members, mode, isIn, onToggle, onToggleAll, value, onValue, amount, assigned, onFillRemainder, preview }: Props) {
+export function SharesEditor({ members, mode, isIn, onToggle, onToggleAll, value, onValue, amount, assigned, onFillRemainder, preview, payerId, settled, onToggleSettled }: Props) {
   const allOn = members.every((m) => isIn(m.id))
   const unit = mode === 'ratio' ? '比率' : '金額'
 
@@ -31,7 +35,7 @@ export function SharesEditor({ members, mode, isIn, onToggle, onToggleAll, value
           {allOn ? '全解除' : '全員'}
         </button>
       </div>
-      <ul className="participants">
+      <ul className="participants with-paid">
         {members.map((m) => (
           <li key={m.id} className={isIn(m.id) ? '' : 'off'}>
             <label className="check">
@@ -48,7 +52,13 @@ export function SharesEditor({ members, mode, isIn, onToggle, onToggleAll, value
                 aria-label={`${m.name} の${unit}`}
               />
             )}
-            <span className="owed">{preview && preview[m.id] ? yen(preview[m.id]) : ''}</span>
+            <Owed v={preview?.[m.id]} settled={settled.includes(m.id) && m.id !== payerId} />
+            <SettledToggle
+              name={m.name}
+              on={settled.includes(m.id)}
+              hidden={m.id === payerId || !preview?.[m.id]}
+              onToggle={() => onToggleSettled(m.id)}
+            />
           </li>
         ))}
       </ul>
@@ -64,4 +74,9 @@ export function SharesEditor({ members, mode, isIn, onToggle, onToggleAll, value
       )}
     </>
   )
+}
+
+/** 各自の負担額。受取済みは取り消し線 */
+export function Owed({ v, settled }: { v: number | undefined; settled: boolean }) {
+  return <span className="owed">{v ? settled ? <s>{yen(v)}</s> : yen(v) : ''}</span>
 }

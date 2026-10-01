@@ -55,6 +55,12 @@ describe('settlementText', () => {
       '【大学】旅行 の精算\nはなこ → たろう  ¥1,200\n総額 ¥5,000\n\n詳細: https://x',
     )
   })
+  it('受取済みの分を支払いの内容付きで添える', () => {
+    const settled = [{ from: 'b', to: 'a', amount: 3000, title: '焼肉' }]
+    expect(settlementText({ groupName: 'G', label: 'すべて', transfers: [], total: 3000, nameOf, settled })).toBe(
+      '【G】精算\n精算は不要です (全員の負担が釣り合っています)\n\n受取済み\nはなこ → たろう  ¥3,000 (焼肉)\n総額 ¥3,000',
+    )
+  })
   it('精算不要', () => {
     expect(settlementText({ groupName: 'G', label: 'すべて', transfers: [], total: 0, nameOf })).toBe('【G】精算\n精算は不要です (全員の負担が釣り合っています)\n総額 ¥0')
   })

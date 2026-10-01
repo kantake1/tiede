@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Expense, Member } from '../types'
-import { computeBalances, settle, type Transfer } from './settle'
+import { computeBalances, settle, settledOf, type Transfer } from './settle'
 import { computeOwed } from './split'
 
 const members = (...names: string[]): Member[] => names.map((n) => ({ id: n, name: n, createdAt: 0 }))
@@ -40,6 +40,13 @@ describe('computeOwed', () => {
 })
 
 describe('settle', () => {
+  it('受取済みの人はその支払いの精算から外れる (立て替えた本人・対象外の印は無視)', () => {
+    const ms = members('A', 'B', 'C', 'D')
+    const es = [exp({ amount: 12000, payerId: 'A', mode: 'equal', shares: { A: 1, B: 1, C: 1 }, settledIds: ['B', 'A', 'D'] })]
+    expect(settledOf(es[0])).toEqual({ B: 4000 })
+    expect(settle(computeBalances(ms, es))).toEqual([{ from: 'C', to: 'A', amount: 4000 }])
+  })
+
   it('残高が全員0になり、合計負担額が支払総額と一致する', () => {
     const ms = members('A', 'B', 'C', 'D')
     const es = [

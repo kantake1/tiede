@@ -1280,6 +1280,47 @@ body.resizing .layout {
   white-space: nowrap;
 }
 
+/* 受取済み: 一覧では名前に ✓ と緑、入力欄では各行の右端の切り替え */
+.owed-item.paid {
+  color: var(--plus);
+}
+
+.participants.with-paid li {
+  grid-template-columns: 1fr auto 72px auto;
+}
+
+.participants.with-paid li:has(> span:first-child) {
+  grid-template-columns: 1fr auto auto;
+}
+
+.participants .share-input {
+  width: 88px;
+}
+
+.participants .owed s {
+  color: var(--muted-soft);
+}
+
+.paid-toggle {
+  grid-column: -2 / -1;
+  min-width: 88px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+button.paid-toggle.on {
+  border-color: var(--plus);
+  color: var(--plus);
+  font-weight: 600;
+  background: transparent;
+}
+
 /* トップ (グループ作成) の見出しは中央 */
 .app-header.center {
   text-align: center;
