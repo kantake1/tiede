@@ -744,6 +744,21 @@ button.sb-item:hover {
   text-decoration: none;
 }
 
+button.sb-item.on {
+  background: var(--surface-strong);
+  font-weight: 600;
+}
+
+/* 削除済みの一覧: 支払い一覧と同じ行の形で、内容と金額を淡く */
+.expense.deleted .expense-title,
+.expense.deleted .expense-amount {
+  color: var(--muted);
+}
+
+button.deleted-back {
+  margin-top: 16px;
+}
+
 .sb-icon {
   width: 24px;
   text-align: center;

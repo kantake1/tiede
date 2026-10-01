@@ -4,6 +4,7 @@ import {
   collection,
   connectFirestoreEmulator,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   initializeFirestore,
@@ -20,7 +21,7 @@ import {
 } from 'firebase/firestore'
 import { WRITE_ERROR_EVENT } from '../lib/errors'
 import type { Category, Expense, Member, Trip } from '../types'
-import type { TripStore } from './types'
+import { splitDeleted, type TripStore } from './types'
 
 export const app = initializeApp({
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -102,6 +103,7 @@ const toExpense = (id: string, d: DocumentData): Expense => ({
   date: d.date,
   hasReceipt: d.hasReceipt === true,
   settledIds: d.settledIds,
+  deletedAt: d.deletedAt,
   createdAt: millis(d.createdAt),
 })
 
@@ -132,7 +134,7 @@ export const firestoreStore: TripStore = {
         trip,
         members: [...ms].sort((a, b) => a.createdAt - b.createdAt),
         categories: [...cs].sort((a, b) => a.createdAt - b.createdAt),
-        expenses: [...es].sort((a, b) => a.createdAt - b.createdAt),
+        ...splitDeleted(es),
         pending: pending.some(Boolean),
       })
     }
@@ -212,7 +214,11 @@ export const firestoreStore: TripStore = {
     return write(batch.commit())
   },
 
-  deleteExpense(tripId, expenseId) {
+  deleteExpense: (tripId, expenseId) => write(updateDoc(doc(expenses(tripId), expenseId), { deletedAt: Date.now() })),
+
+  restoreExpense: (tripId, expenseId) => write(updateDoc(doc(expenses(tripId), expenseId), { deletedAt: deleteField() })),
+
+  purgeExpense(tripId, expenseId) {
     const batch = writeBatch(db)
     batch.delete(doc(expenses(tripId), expenseId))
     batch.delete(doc(receipts(tripId), expenseId))
@@ -222,14 +228,5 @@ export const firestoreStore: TripStore = {
   async getReceipt(tripId, expenseId) {
     const s = await getDoc(doc(receipts(tripId), expenseId))
     return s.exists() ? (s.data().data as string) : null
-  },
-
-  restoreExpense(tripId, { id, createdAt, ...rest }, receipt) {
-    // undefined のフィールドは Firestore が受け付けないため除く
-    const data = Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== undefined))
-    const batch = writeBatch(db)
-    batch.set(doc(expenses(tripId), id), { ...data, hasReceipt: !!receipt, createdAt: Timestamp.fromMillis(createdAt) })
-    if (receipt) batch.set(doc(receipts(tripId), id), { data: receipt, createdAt: serverTimestamp() })
-    return write(batch.commit())
   },
 }

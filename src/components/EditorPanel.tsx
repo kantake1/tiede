@@ -93,7 +93,7 @@ export function EditorPanel(p: Props) {
             onCreateCategory={(name) => store.addCategory(tripId, name)}
             readReceipt={readReceipt}
             getReceipt={editing ? () => store.getReceipt(tripId, editing.id) : undefined}
-            receiptLimitReached={data.expenses.filter((e) => e.hasReceipt).length >= MAX_RECEIPTS_PER_GROUP}
+            receiptLimitReached={[...data.expenses, ...data.deleted].filter((e) => e.hasReceipt).length >= MAX_RECEIPTS_PER_GROUP}
             onSubmit={async (input, receipt) => {
               if (editingChanged && !confirm('この支払いは他の人が更新しています。上書きして保存しますか？')) throw new Error('cancelled')
               const target = editing

@@ -34,6 +34,8 @@ export type Expense = {
   hasReceipt?: boolean
   /** その場で負担分を受け取った人。精算から外す */
   settledIds?: string[]
+  /** 削除した日時。「削除済み」に残り、合計・精算には含めない */
+  deletedAt?: number
   createdAt: number
 }
 
@@ -57,7 +59,10 @@ export type TripData = {
   trip: Trip
   members: Member[]
   categories: Category[]
+  /** 削除済みを除く支払い */
   expenses: Expense[]
+  /** 削除済みの支払い (新しく削除した順) */
+  deleted: Expense[]
   /** サーバーへ未送信の変更がある (オフライン時など) */
   pending?: boolean
 }

@@ -29,7 +29,7 @@ export function SettingsDialog({ ref, data, store, tripId, run, onDeleteEvent }:
         title={`メンバー (${data.members.length}人)`}
         entries={data.members}
         placeholder="メンバーを追加"
-        isReferenced={(id) => isMemberReferenced(data.expenses, id)}
+        isReferenced={(id) => isMemberReferenced([...data.expenses, ...data.deleted], id)}
         onAdd={(name) => run(store.addMember(tripId, name))}
         onRename={(id, name) => run(store.renameMember(tripId, id, name))}
         onRemove={(id) => run(store.removeMember(tripId, id))}

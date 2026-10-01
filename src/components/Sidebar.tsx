@@ -24,6 +24,10 @@ type Props = {
   collapsed: boolean
   onToggleCollapse: () => void
   onClose: () => void
+  /** 削除済みの支払いの件数 (0 なら項目を出さない) */
+  deletedCount: number
+  showingDeleted: boolean
+  onShowDeleted: () => void
 }
 
 export function Sidebar(p: Props) {
@@ -124,6 +128,18 @@ export function Sidebar(p: Props) {
       </nav>
 
       <div className="sb-foot">
+        {p.deletedCount > 0 && (
+          <button
+            className={`ghost sb-item ${p.showingDeleted ? 'on' : ''}`}
+            onClick={p.onShowDeleted}
+            aria-pressed={p.showingDeleted}
+            aria-label={`削除済み (${p.deletedCount}件)`}
+            title="削除済み"
+          >
+            <Trash2 size={18} className="sb-icon" />
+            <span className="sb-label">削除済み ({p.deletedCount})</span>
+          </button>
+        )}
         <button className="ghost sb-item" onClick={p.onShare} aria-label="URLを共有" title="URLを共有">
           <Link2 size={18} className="sb-icon" />
           <span className="sb-label">{p.copied ? 'コピーしました' : 'URLを共有'}</span>

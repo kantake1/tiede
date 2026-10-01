@@ -16,6 +16,7 @@ const ex = (id: string, amount: number, categoryId?: string, more: Partial<Expen
 const data: TripData = {
   trip: { id: 't', name: 'G', createdAt: 0 },
   members: [],
+  deleted: [],
   categories: [
     { id: 'okinawa', name: '沖縄', archived: false, createdAt: 1 },
     { id: 'nomi', name: '飲み会', archived: false, createdAt: 2 },
