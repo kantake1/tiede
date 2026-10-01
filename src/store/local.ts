@@ -1,6 +1,6 @@
 import { loadJson } from '../lib/storage'
 import type { TripData } from '../types'
-import type { TripStore } from './types'
+import { splitDeleted, type TripStore } from './types'
 
 // Firebase 未設定時の動作確認用。データはこのブラウザ内にのみ保存される。
 const KEY = 'tiede:local-trips'
@@ -45,6 +45,7 @@ export const localStore: TripStore = {
       members: memberNames.map((n, i) => ({ id: newId(), name: n, createdAt: now + i })),
       categories: [],
       expenses: [],
+      deleted: [],
     }
     localStorage.setItem(KEY, JSON.stringify(all))
     return id
@@ -54,7 +55,11 @@ export const localStore: TripStore = {
     // categories 追加前に保存されたデータにも対応する
     const l = () => {
       const t = load()[tripId]
-      onData(t ? { ...t, categories: (t.categories ?? []).map((c) => ({ ...c, archived: c.archived ?? false })) } : null)
+      onData(
+        t
+          ? { ...t, categories: (t.categories ?? []).map((c) => ({ ...c, archived: c.archived ?? false })), ...splitDeleted(t.expenses) }
+          : null,
+      )
     }
     listeners.add(l)
     queueMicrotask(l)
@@ -108,16 +113,19 @@ export const localStore: TripStore = {
   },
 
   async deleteExpense(tripId, expenseId) {
+    mutate(tripId, (t) => t.expenses.forEach((x) => x.id === expenseId && (x.deletedAt = Date.now())))
+  },
+
+  async restoreExpense(tripId, expenseId) {
+    mutate(tripId, (t) => t.expenses.forEach((x) => x.id === expenseId && delete x.deletedAt))
+  },
+
+  async purgeExpense(tripId, expenseId) {
     setReceipt(tripId, expenseId, null)
     mutate(tripId, (t) => (t.expenses = t.expenses.filter((x) => x.id !== expenseId)))
   },
 
   async getReceipt(tripId, expenseId) {
     return loadReceipts()[`${tripId}/${expenseId}`] ?? null
-  },
-
-  async restoreExpense(tripId, expense, receipt) {
-    if (receipt) setReceipt(tripId, expense.id, receipt)
-    mutate(tripId, (t) => (t.expenses = [...t.expenses.filter((x) => x.id !== expense.id), { ...expense, hasReceipt: !!receipt }]))
   },
 }

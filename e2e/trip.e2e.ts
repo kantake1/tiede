@@ -165,3 +165,33 @@ test('広い画面: 格納を選んでいてもサイドバー幅の取っ手が
   await page.waitForURL(/\/t\/.+/)
   await expect(page.getByRole('separator', { name: /サイドバーの幅/ })).toBeAttached()
 })
+
+test('削除した支払いは「削除済み」から元に戻す・完全に削除できる', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/')
+  await page.getByPlaceholder('例: いつものメンバー').fill('削除済み')
+  await page.locator('textarea').fill('Aさん\nBさん')
+  await page.locator('button[type="submit"]').click()
+  await page.waitForURL(/\/t\/.+/)
+
+  const f = form(page)
+  for (const title of ['昼食', '夕食']) {
+    await f.getByPlaceholder('例: 食事代').fill(title)
+    await f.getByPlaceholder('12000').fill('2000')
+    await f.getByRole('button', { name: '追加', exact: true }).click()
+    await expect(page.locator('.expense', { hasText: title })).toBeVisible()
+  }
+  for (const title of ['昼食', '夕食']) await page.locator('.expense', { hasText: title }).getByRole('button', { name: '削除' }).click()
+  await expect(allTotal(page)).toContainText('0')
+
+  // 削除済みから元に戻すと合計に戻る
+  await page.getByRole('button', { name: '削除済み (2件)' }).click()
+  await page.locator('.expense.deleted', { hasText: '昼食' }).getByRole('button', { name: '元に戻す' }).click()
+  await expect(allTotal(page)).toContainText('2,000')
+
+  // 完全に削除すると削除済みが0件になり、通常の一覧に戻る
+  await page.locator('.expense.deleted', { hasText: '夕食' }).getByRole('button', { name: '完全に削除' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: '完全に削除' }).click()
+  await expect(page.getByRole('button', { name: /削除済み/ })).toHaveCount(0)
+  await expect(page.locator('.expense')).toHaveText([/昼食/])
+})

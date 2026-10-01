@@ -1,6 +1,7 @@
 import { Archive, ArchiveRestore, Check, Link2, Menu, Plus } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import { useConfirm } from '../components/ConfirmDialog'
+import { DeletedList } from '../components/DeletedList'
 import { EditorPanel } from '../components/EditorPanel'
 import { ExpenseList } from '../components/ExpenseList'
 import { Logo } from '../components/Logo'
@@ -28,7 +29,13 @@ export function TripPage({ tripId }: { tripId: string }) {
   const receiptViewer = useReceiptViewer((msg) => notify(msg, { tone: 'error' }))
   const [copied, setCopied] = useState(false)
   // 精算・一覧に含めるイベント。空なら全部。'' は未分類
-  const [filter, setFilter] = useState<string[]>([])
+  const [filter, setFilterState] = useState<string[]>([])
+  // 一覧の欄に削除済みの支払いを出す。イベントを選ぶと通常の一覧に戻る
+  const [deletedView, setDeletedView] = useState(false)
+  const setFilter: typeof setFilterState = (f) => {
+    setDeletedView(false)
+    setFilterState(f)
+  }
   const settingsRef = useRef<HTMLDialogElement>(null)
 
   const nameOf = useMemo(() => {
@@ -68,6 +75,9 @@ export function TripPage({ tripId }: { tripId: string }) {
   if (data === null) return status(<p className="error">グループが見つかりません。URLを確認してください。</p>)
 
   const { visible, total, rows, archivedRows, selected, defaultCategoryId, filterLabel, selectedActive, bulk } = tripView(data, filter)
+
+  // 0件になったら通常の一覧に戻す
+  const showDeleted = deletedView && data.deleted.length > 0
 
   const run = (p: Promise<unknown>) => p.catch((e) => notify(`保存できませんでした: ${friendlyError(e)}`, { tone: 'error' }))
 
@@ -169,6 +179,12 @@ export function TripPage({ tripId }: { tripId: string }) {
         collapsed={layout.collapsed}
         onToggleCollapse={layout.toggleCollapsed}
         onClose={() => setDrawer(false)}
+        deletedCount={data.deleted.length}
+        showingDeleted={showDeleted}
+        onShowDeleted={() => {
+          setDeletedView(true)
+          setDrawer(false)
+        }}
       />
       <div className="backdrop" onClick={() => setDrawer(false)} aria-hidden />
 
@@ -179,7 +195,7 @@ export function TripPage({ tripId }: { tripId: string }) {
         <div className="grow topbar-title">
           <div className="topbar-name">{data.trip.name}</div>
           <div className="muted small">
-            {filterLabel}
+            {showDeleted ? '削除済み' : filterLabel}
             {syncLabel && <span className={`sync ${online ? '' : 'offline'}`}>{syncLabel}</span>}
           </div>
         </div>
@@ -205,55 +221,76 @@ export function TripPage({ tripId }: { tripId: string }) {
       />
 
       <section className="col-list" aria-label="精算と支払い一覧">
-        <SettlementPanel
-          members={data.members}
-          expenses={visible}
-          nameOf={nameOf}
-          groupName={data.trip.name}
-          label={filterLabel}
-          onShareText={shareText}
-          action={
-            bulk ? (
-              <button className="small with-icon" onClick={archiveMany}>
-                <Archive size={16} /> まとめて精算済みにする
-              </button>
-            ) : (
-              selected &&
-              (selected.archived ? (
-                <button className="ghost small with-icon" onClick={() => archive(false, selected.id)}>
-                  <ArchiveRestore size={16} /> アーカイブから戻す
-                </button>
-              ) : (
-                <button className="small with-icon" onClick={() => archive(true, selected.id)}>
-                  <Archive size={16} /> 精算済みにする
-                </button>
-              ))
-            )
-          }
-        />
-        <ExpenseList
-          expenses={visible}
-          nameOf={nameOf}
-          memberIds={data.members.map((m) => m.id)}
-          categoryOf={categoryOf}
-          onShowReceipt={(e) => receiptViewer.open(() => store.getReceipt(tripId, e.id))}
-          editingId={editing?.id}
-          onEdit={(e) => {
-            setEditing(e)
-            setSheet(true)
-            document.querySelector('.col-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-          }}
-          onDelete={async (e) => {
-            // 確認ダイアログの代わりに、削除後しばらく「元に戻す」を出す
-            if (editing?.id === e.id) setEditing(null)
-            // 写真も一緒に消えるため、元に戻せるよう先に読み込んでおく
-            const receipt = e.hasReceipt ? await store.getReceipt(tripId, e.id).catch(() => null) : null
-            run(store.deleteExpense(tripId, e.id))
-            notify(`「${e.title}」を削除しました`, {
-              action: { label: '元に戻す', run: () => run(store.restoreExpense(tripId, e, receipt)) },
-            })
-          }}
-        />
+        {showDeleted ? (
+          <DeletedList
+            expenses={data.deleted}
+            nameOf={nameOf}
+            categoryOf={categoryOf}
+            onBack={() => setDeletedView(false)}
+            onRestore={(e) => {
+              run(store.restoreExpense(tripId, e.id))
+              notify(`「${e.title}」を元に戻しました`)
+            }}
+            onPurge={async (e) => {
+              const ok = await askConfirm({
+                title: `「${e.title}」を完全に削除しますか？`,
+                body: `${e.hasReceipt ? 'レシート写真も削除されます。' : ''}元に戻せません。`,
+                okLabel: '完全に削除',
+              })
+              if (ok) run(store.purgeExpense(tripId, e.id))
+            }}
+          />
+        ) : (
+          <>
+            <SettlementPanel
+              members={data.members}
+              expenses={visible}
+              nameOf={nameOf}
+              groupName={data.trip.name}
+              label={filterLabel}
+              onShareText={shareText}
+              action={
+                bulk ? (
+                  <button className="small with-icon" onClick={archiveMany}>
+                    <Archive size={16} /> まとめて精算済みにする
+                  </button>
+                ) : (
+                  selected &&
+                  (selected.archived ? (
+                    <button className="ghost small with-icon" onClick={() => archive(false, selected.id)}>
+                      <ArchiveRestore size={16} /> アーカイブから戻す
+                    </button>
+                  ) : (
+                    <button className="small with-icon" onClick={() => archive(true, selected.id)}>
+                      <Archive size={16} /> 精算済みにする
+                    </button>
+                  ))
+                )
+              }
+            />
+            <ExpenseList
+              expenses={visible}
+              nameOf={nameOf}
+              memberIds={data.members.map((m) => m.id)}
+              categoryOf={categoryOf}
+              onShowReceipt={(e) => receiptViewer.open(() => store.getReceipt(tripId, e.id))}
+              editingId={editing?.id}
+              onEdit={(e) => {
+                setEditing(e)
+                setSheet(true)
+                document.querySelector('.col-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              }}
+              onDelete={(e) => {
+                // 確認ダイアログの代わりに、削除後しばらく「元に戻す」を出す。「削除済み」からも戻せる
+                if (editing?.id === e.id) setEditing(null)
+                run(store.deleteExpense(tripId, e.id))
+                notify(`「${e.title}」を削除しました`, {
+                  action: { label: '元に戻す', run: () => run(store.restoreExpense(tripId, e.id)) },
+                })
+              }}
+            />
+          </>
+        )}
       </section>
 
       <button

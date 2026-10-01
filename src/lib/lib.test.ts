@@ -4,6 +4,7 @@ import { friendlyError } from './errors'
 import { parseNumber, yen } from './format'
 import { settlementText } from './shareText'
 import { loadFlag, loadJson, saveFlag, saveJson } from './storage'
+import { splitDeleted } from '../store/types'
 
 describe('date', () => {
   it('ローカル日付のキーを作る', () => {
@@ -99,5 +100,14 @@ describe('storage', () => {
     expect(loadFlag('f')).toBe(false)
     expect(() => saveJson('k', 1)).not.toThrow()
     expect(() => saveFlag('f', true)).not.toThrow()
+  })
+})
+
+describe('splitDeleted', () => {
+  it('通常は作成順、削除済みは新しく削除した順', () => {
+    const e = (id: string, createdAt: number, deletedAt?: number) => ({ id, title: '', amount: 1, payerId: 'a', mode: 'equal' as const, shares: {}, createdAt, deletedAt })
+    const r = splitDeleted([e('b', 2), e('x', 1, 10), e('a', 1), e('y', 2, 20)])
+    expect(r.expenses.map((x) => x.id)).toEqual(['a', 'b'])
+    expect(r.deleted.map((x) => x.id)).toEqual(['y', 'x'])
   })
 })

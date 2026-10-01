@@ -32,6 +32,8 @@ export type Expense = {
   date?: string
   /** レシート写真を保存している (写真本体は receipts に別保存) */
   hasReceipt?: boolean
+  /** 削除した日時。「削除済み」に残り、合計・精算には含めない */
+  deletedAt?: number
   createdAt: number
 }
 
@@ -55,7 +57,10 @@ export type TripData = {
   trip: Trip
   members: Member[]
   categories: Category[]
+  /** 削除済みを除く支払い */
   expenses: Expense[]
+  /** 削除済みの支払い (新しく削除した順) */
+  deleted: Expense[]
   /** サーバーへ未送信の変更がある (オフライン時など) */
   pending?: boolean
 }
